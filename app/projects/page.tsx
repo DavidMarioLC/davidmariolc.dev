@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { projects } from "@/.velite";
+import { projects } from "#site/content";
 import {
   Tooltip,
   TooltipContent,
