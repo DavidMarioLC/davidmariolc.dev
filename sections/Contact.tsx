@@ -29,8 +29,17 @@ export const Contact = () => {
           <span className="text-sm opacity-60 uppercase tracking-wider">o</span>
           <div className="flex-1 h-px bg-white/10"></div>
         </div>
-        <Button className="rounded-2xl mb-10 lg:mb-20 text-base md:text-lg md:py-6">
-          Programe una llamada de 30 min
+        <Button
+          className="rounded-2xl mb-10 lg:mb-20 text-base md:text-lg md:py-6"
+          asChild
+        >
+          <a
+            href="https://calendly.com/davidmariolc/30min"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Programe una llamada de 30 min
+          </a>
         </Button>
         <div className="flex items-center justify-between flex-col-reverse gap-5 md:flex-row  w-full pt-8 border-t border-white/10 ">
           <p className="text-sm opacity-60">
