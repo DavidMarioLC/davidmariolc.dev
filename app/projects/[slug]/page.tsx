@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { projects } from "@/.velite";
+import { projects } from "#site/content";
 
 interface ProjectProps {
   params: Promise<{ slug: string }>;
