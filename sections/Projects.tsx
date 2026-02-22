@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { projects } from "@/.velite";
+import { projects } from "#site/content";
 import { ProjectCard } from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
 
