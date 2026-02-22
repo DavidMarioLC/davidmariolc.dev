@@ -19,7 +19,7 @@ export const Contact = () => {
           Normalmente respondo en 24 horas.
         </p>
         <a
-          href="mailto:contact@davidmariolc.dev"
+          href="mailto:hi@davidmariolc.dev"
           className="text-2xl md:text-5xl font-bold hover:opacity-70 transition-opacity duration-300 break-all px-4"
         >
           hi@davidmariolc.dev
