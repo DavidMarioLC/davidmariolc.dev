@@ -5,6 +5,7 @@ date: 2025-01-21
 category: E-commerce & 3D
 technologies: [nextjs, typescript, sanity, motion, tailwindcss]
 cover: cover.webp
+description: Transformación de un diseño de alta fidelidad en una experiencia web dinámica, escalable y administrable por el cliente.
 ---
 
 Transformación de un diseño de alta fidelidad en una experiencia web dinámica, escalable y administrable por el cliente.
