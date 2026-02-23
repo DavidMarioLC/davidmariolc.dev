@@ -18,7 +18,32 @@ export async function generateMetadata({ params }: ProjectProps) {
   const { slug } = await params;
   const project = getProjectBySlug(slug);
   if (project == null) return {};
-  return { title: project.title, description: project.description };
+
+  return {
+    title: project.title,
+    description: project.description,
+    openGraph: {
+      title: project.title,
+      description: project.description,
+      type: "article",
+      url: project.permalink,
+      images: [
+        {
+          url: project.cover.src,
+          width: project.cover.width,
+          height: project.cover.height,
+          alt: project.title,
+        },
+      ],
+      publishedTime: project.date,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: project.title,
+      description: project.description,
+      images: [project.cover.src],
+    },
+  };
 }
 
 export default async function ProjectPage({ params }: ProjectProps) {
