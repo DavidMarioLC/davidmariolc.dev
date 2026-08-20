@@ -1,0 +1,19 @@
+---
+title: Why your AI app should not pick the model
+description: A router decides between a fast model and a powerful one by looking at the latency budget, and the client never learns which one answered.
+date: 2026-08-20
+draft: true
+tags:
+  - ia
+  - arquitectura
+---
+
+When an app always calls the most powerful model, it pays 1.8 seconds for answers nobody needed to be brilliant. When it always calls the fast one, the answer lands in 200ms and sometimes it is useless.
+
+## The idea
+
+The client does not make the call: a router does, and it makes it with a number.
+
+<ConceptAnimation id="model-router" />
+
+The latency budget is a field on the request, not a hunch in the programmer's head. That is what makes the decision automatable.
