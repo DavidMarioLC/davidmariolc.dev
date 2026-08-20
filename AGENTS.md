@@ -4,6 +4,18 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+# Gestor de paquetes: pnpm (obligatorio)
+
+Este proyecto usa **pnpm** exclusivamente. Nunca uses `npm`, `yarn` ni `bun` para instalar, actualizar o ejecutar scripts.
+
+- Instalar dependencias: `pnpm install`
+- Añadir dependencia: `pnpm add <pkg>` (dev: `pnpm add -D <pkg>`)
+- Eliminar dependencia: `pnpm remove <pkg>`
+- Ejecutar scripts: `pnpm <script>` (p. ej. `pnpm dev`, `pnpm build`)
+- Ejecutar binarios sin instalar: `pnpm dlx <pkg>`
+
+El único lockfile válido es `pnpm-lock.yaml`. Si aparece `package-lock.json`, `yarn.lock` o `bun.lockb`, bórralo y regenera con `pnpm install`.
+
 
 # Ultracite Code Standards
 
