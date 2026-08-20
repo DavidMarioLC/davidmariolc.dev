@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
@@ -7,9 +8,31 @@ import {
 } from "@/components/setup/setup-block";
 import { routing } from "@/i18n/routing";
 import { getSetupBlock, isLocale, SETUP_BLOCKS } from "@/lib/content";
+import { pageMetadata } from "@/lib/metadata";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!isLocale(locale)) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale, namespace: "setup" });
+
+  return pageMetadata({
+    description: t("subtitle"),
+    locale,
+    path: "/setup",
+    title: t("title"),
+  });
 }
 
 export default async function SetupPage({

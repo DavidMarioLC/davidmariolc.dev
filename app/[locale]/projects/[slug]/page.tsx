@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Mdx } from "@/components/mdx/mdx-content";
@@ -6,7 +7,13 @@ import { BrandLogo } from "@/components/site/brand-logo";
 import { CloudImage } from "@/components/site/cloud-image";
 import { Button } from "@/components/ui/button";
 import { routing } from "@/i18n/routing";
-import { getProject, getProjects, isLocale } from "@/lib/content";
+import {
+  getProject,
+  getProjects,
+  isLocale,
+  translatedLocales,
+} from "@/lib/content";
+import { pageMetadata } from "@/lib/metadata";
 
 // A slug that was never generated is a 404, not a page rendered on demand.
 export const dynamicParams = false;
@@ -15,6 +22,33 @@ export function generateStaticParams() {
   return routing.locales.flatMap((locale) =>
     getProjects(locale).map((project) => ({ locale, slug: project.slug }))
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+
+  if (!isLocale(locale)) {
+    return {};
+  }
+
+  const project = getProject(locale, slug);
+
+  if (!project) {
+    return {};
+  }
+
+  return pageMetadata({
+    description: project.description,
+    image: `/${locale}/projects/${slug}/opengraph-image`,
+    locale,
+    locales: translatedLocales("projects", slug),
+    path: `/projects/${slug}`,
+    title: project.title,
+  });
 }
 
 export default async function ProjectPage({

@@ -125,5 +125,11 @@
   },
   "challenge": {
     "reveal": "Ver respuesta"
+  },
+  "meta": {
+    "siteName": "davidmariolc.dev",
+    "homeTitle": "David Licla, desarrollador frontend",
+    "homeDescription": "Desarrollador frontend de Ica, Perú. Construyo productos con Next.js, TypeScript y Supabase, escribo sobre el oficio y ayudo a organizar la comunidad GDG Ica.",
+    "ogAlt": "davidmariolc.dev"
   }
 }

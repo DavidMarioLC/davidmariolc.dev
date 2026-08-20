@@ -125,5 +125,11 @@
   },
   "challenge": {
     "reveal": "Show answer"
+  },
+  "meta": {
+    "siteName": "davidmariolc.dev",
+    "homeTitle": "David Licla, frontend developer",
+    "homeDescription": "Frontend developer from Ica, Peru. I build products with Next.js, TypeScript and Supabase, write about the craft, and help run the GDG Ica community.",
+    "ogAlt": "davidmariolc.dev"
   }
 }

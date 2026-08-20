@@ -67,14 +67,14 @@
 
 ## 6. Fase 6 — SEO, sindicación y cierre
 
-- [ ] 6.1 Fijar `NEXT_PUBLIC_SITE_URL` y documentar las variables de entorno requeridas
-- [ ] 6.2 Añadir `generateMetadata` por ruta con título, descripción y canónica absoluta derivados del contenido
-- [ ] 6.3 Construir `alternates.languages` a partir de la existencia real de la traducción, sin declarar URLs inexistentes
-- [ ] 6.4 Crear las imágenes OG con `opengraph-image.tsx` e `ImageResponse`, con plantilla común y fallback del sitio
-- [ ] 6.5 Crear `app/sitemap.ts` con todas las páginas públicas de ambos idiomas y su fecha de modificación, excluyendo borradores
-- [ ] 6.6 Crear `app/robots.ts` permitiendo indexación y apuntando al sitemap
-- [ ] 6.7 Crear el feed por idioma como Route Handler y anunciarlo con `<link rel="alternate">` en las páginas del blog
-- [ ] 6.8 Añadir datos estructurados: perfil del autor en el home y artículo en cada detalle de post
-- [ ] 6.9 Sustituir el README del template por el del proyecto (arranque, escritura de contenido, variables de entorno)
-- [ ] 6.10 Pasar `pnpm dlx ultracite fix`, `pnpm check`, `pnpm typecheck` y `pnpm build` en limpio
-- [ ] 6.11 Revisión final de accesibilidad: navegación por teclado, contraste, jerarquía de encabezados y respeto a la preferencia de movimiento reducido
+- [x] 6.1 Fijar `NEXT_PUBLIC_SITE_URL` y documentar las variables de entorno requeridas
+- [x] 6.2 Añadir `generateMetadata` por ruta con título, descripción y canónica absoluta derivados del contenido
+- [x] 6.3 Construir `alternates.languages` a partir de la existencia real de la traducción, sin declarar URLs inexistentes
+- [x] 6.4 Crear las imágenes OG con `opengraph-image.tsx` e `ImageResponse`, con plantilla común y fallback del sitio
+- [x] 6.5 Crear `app/sitemap.ts` con todas las páginas públicas de ambos idiomas y su fecha de modificación, excluyendo borradores
+- [x] 6.6 Crear `app/robots.ts` permitiendo indexación y apuntando al sitemap
+- [x] 6.7 Crear el feed por idioma como Route Handler y anunciarlo con `<link rel="alternate">` en las páginas del blog
+- [x] 6.8 Añadir datos estructurados: perfil del autor en el home y artículo en cada detalle de post
+- [x] 6.9 Sustituir el README del template por el del proyecto (arranque, escritura de contenido, variables de entorno)
+- [x] 6.10 Pasar `pnpm dlx ultracite fix`, `pnpm check`, `pnpm typecheck` y `pnpm build` en limpio
+- [x] 6.11 Revisión final de accesibilidad: navegación por teclado, contraste, jerarquía de encabezados y respeto a la preferencia de movimiento reducido

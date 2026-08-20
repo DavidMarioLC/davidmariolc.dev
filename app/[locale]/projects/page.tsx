@@ -1,11 +1,34 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ProjectCard } from "@/components/home/project-card";
 import { routing } from "@/i18n/routing";
 import { getProjects, isLocale } from "@/lib/content";
+import { pageMetadata } from "@/lib/metadata";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!isLocale(locale)) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale, namespace: "projects" });
+
+  return pageMetadata({
+    description: t("subtitle"),
+    locale,
+    path: "/projects",
+    title: t("title"),
+  });
 }
 
 export default async function ProjectsPage({
@@ -39,6 +62,8 @@ export default async function ProjectsPage({
             <ProjectCard
               actionLabel={tHome("viewProject")}
               description={project.description}
+              // The page title is the only heading above the grid here.
+              headingLevel="h2"
               key={project.slug}
               preview={project.preview}
               slug={project.slug}

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -6,6 +7,7 @@ import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { routing } from "@/i18n/routing";
+import { SITE_URL } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 import "../globals.css";
 
@@ -15,6 +17,19 @@ const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
+
+/**
+ * `metadataBase` is what lets every page below declare relative canonicals and
+ * OG image paths and still emit absolute URLs. The title template is here so a
+ * page only ever states its own name.
+ */
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "davidmariolc.dev",
+    template: "%s · davidmariolc.dev",
+  },
+};
 
 export default async function LocaleLayout({
   children,

@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PostList } from "@/components/blog/post-list";
 import { Link, routing } from "@/i18n/routing";
-import { getPostsByTag, getTags, isLocale } from "@/lib/content";
+import { getPostsByTag, getTags, isLocale, LOCALES } from "@/lib/content";
+import { pageMetadata } from "@/lib/metadata";
 
 export const dynamicParams = false;
 
@@ -10,6 +12,30 @@ export function generateStaticParams() {
   return routing.locales.flatMap((locale) =>
     getTags(locale).map((tag) => ({ locale, tag }))
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; tag: string }>;
+}): Promise<Metadata> {
+  const { locale, tag } = await params;
+
+  if (!isLocale(locale)) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale, namespace: "posts" });
+  const title = t("taggedWith", { tag });
+
+  return pageMetadata({
+    description: title,
+    locale,
+    // Tags are written per language, so a tag page exists only where the tag does.
+    locales: LOCALES.filter((entry) => getTags(entry).includes(tag)),
+    path: `/posts/tags/${tag}`,
+    title,
+  });
 }
 
 export default async function TagPage({

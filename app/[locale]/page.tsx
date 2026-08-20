@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   getFormatter,
@@ -11,6 +12,7 @@ import { Intro } from "@/components/home/intro";
 import { ProfileHeader } from "@/components/home/profile-header";
 import { ProjectCard } from "@/components/home/project-card";
 import { Section } from "@/components/site/section";
+import { StructuredData } from "@/components/site/structured-data";
 import {
   getAchievements,
   getCommunity,
@@ -19,9 +21,32 @@ import {
   getProfile,
   isLocale,
 } from "@/lib/content";
+import { env } from "@/lib/env";
+import { absoluteUrl, pageMetadata } from "@/lib/metadata";
 
 const HOME_COMMUNITY_LIMIT = 4;
 const HOME_POSTS_LIMIT = 3;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!isLocale(locale)) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale, namespace: "meta" });
+
+  return pageMetadata({
+    description: t("homeDescription"),
+    locale,
+    path: "",
+    title: t("homeTitle"),
+  });
+}
 
 export default async function HomePage({
   params,
@@ -51,8 +76,19 @@ export default async function HomePage({
   const achievements = getAchievements(locale);
   const community = getCommunity(locale).slice(0, HOME_COMMUNITY_LIMIT);
 
+  // Describes the author once, from the same profile the page renders.
+  const person = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    image: `https://res.cloudinary.com/${env.cloudinaryCloudName}/image/upload/${profile.avatar.publicId}`,
+    name: profile.name,
+    sameAs: profile.social.map((link) => link.url),
+    url: absoluteUrl(locale),
+  };
+
   return (
     <div className="space-y-20">
+      <StructuredData data={person} />
       <div className="space-y-8">
         <ProfileHeader
           avatar={profile.avatar}

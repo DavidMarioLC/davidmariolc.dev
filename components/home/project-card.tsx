@@ -5,8 +5,10 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Link } from "@/i18n/routing";
 
 /**
- * `CardTitle` and `CardDescription` render divs, so the heading is a real `h3`
- * here: the projects grid has to keep its place in the heading outline.
+ * `CardTitle` and `CardDescription` render divs, so the heading is a real
+ * heading. Its level is a prop because the card sits under a section heading on
+ * the home page and directly under the page title on the index, and a card
+ * cannot know which without being told.
  */
 export function ProjectCard({
   slug,
@@ -14,12 +16,14 @@ export function ProjectCard({
   description,
   preview,
   actionLabel,
+  headingLevel: Heading = "h3",
 }: {
   slug: string;
   title: string;
   description: string;
   preview: CloudImageSource;
   actionLabel: string;
+  headingLevel?: "h2" | "h3";
 }) {
   return (
     <Card className="gap-0 overflow-hidden rounded-md p-0">
@@ -29,7 +33,7 @@ export function ProjectCard({
         sizes="(max-width: 768px) 100vw, 33vw"
       />
       <CardContent className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="font-mono text-base">{title}</h3>
+        <Heading className="font-mono text-base">{title}</Heading>
         <p className="text-muted-foreground text-sm leading-relaxed">
           {description}
         </p>
