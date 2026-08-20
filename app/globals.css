@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* The single column the header, the content and the footer all share. It
+     lives here so moving it is one edit, not four. */
+  --container-content: 48rem;
   --font-heading: var(--font-mono);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
