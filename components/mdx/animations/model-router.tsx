@@ -3,6 +3,8 @@
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import {
   ConceptAnimationFrame,
   type ConceptStep,
@@ -19,33 +21,17 @@ import {
 
 gsap.registerPlugin(DrawSVGPlugin, MotionPathPlugin);
 
-const STEPS: readonly ConceptStep[] = [
-  {
-    id: "request",
-    label: "step-1-request",
-    text: "Toda petición entra por el router. El cliente no elige el modelo: solo pide una respuesta.",
-  },
-  {
-    id: "budget",
-    label: "step-2-budget",
-    text: "El router lee el presupuesto de latencia de la petición. Es un número, no una intuición.",
-  },
-  {
-    id: "fast",
-    label: "step-3-fast",
-    text: "Si el presupuesto es ajustado, la petición va al modelo rápido: menos calidad, respuesta en 200ms.",
-  },
-  {
-    id: "strong",
-    label: "step-4-strong",
-    text: "Si sobra tiempo, va al modelo potente. El camino del paso anterior queda descartado.",
-  },
-  {
-    id: "response",
-    label: "step-5-response",
-    text: "La respuesta vuelve por el mismo canal. Desde fuera, ambos caminos son indistinguibles.",
-  },
-];
+/**
+ * The order and the timeline labels; the prose lives in the message catalogs so
+ * the same diagram reads in the locale of the post embedding it.
+ */
+const STEP_SEQUENCE = [
+  { id: "request", label: "step-1-request" },
+  { id: "budget", label: "step-2-budget" },
+  { id: "fast", label: "step-3-fast" },
+  { id: "strong", label: "step-4-strong" },
+  { id: "response", label: "step-5-response" },
+] as const;
 
 const DIM = 0.35;
 const LIT = 1;
@@ -151,11 +137,25 @@ export function buildTimeline(root: SVGSVGElement) {
 }
 
 export default function ModelRouterAnimation() {
+  const t = useTranslations("animations.modelRouter");
+
+  // Memoised because the frame keys its timeline off `steps`: a new array every
+  // render would rebuild the timeline and drop the reader back to step one.
+  const steps: readonly ConceptStep[] = useMemo(
+    () =>
+      STEP_SEQUENCE.map(({ id, label }) => ({
+        id,
+        label,
+        text: t(`steps.${id}`),
+      })),
+    [t]
+  );
+
   return (
     <ConceptAnimationFrame
       buildTimeline={buildTimeline}
-      steps={STEPS}
-      title="Cómo un router elige entre dos modelos"
+      steps={steps}
+      title={t("title")}
     >
       <svg
         aria-labelledby="title-model-router"
@@ -163,10 +163,7 @@ export default function ModelRouterAnimation() {
         role="img"
         viewBox="0 0 720 300"
       >
-        <title id="title-model-router">
-          Un router recibe una petición, lee su presupuesto de latencia y la
-          envía al modelo rápido o al modelo potente.
-        </title>
+        <title id="title-model-router">{t("description")}</title>
 
         <g id="edges">
           <path
@@ -205,7 +202,7 @@ export default function ModelRouterAnimation() {
               y="120"
             />
             <text fill="#fafafa" fontSize="13" fontWeight="600" x="36" y="146">
-              Cliente
+              {t("nodes.client")}
             </text>
             <text
               fill="#a1a1a1"
@@ -230,7 +227,7 @@ export default function ModelRouterAnimation() {
               y="112"
             />
             <text fill="#fafafa" fontSize="13" fontWeight="600" x="276" y="134">
-              Router
+              {t("nodes.router")}
             </text>
             <text
               fill="#a1a1a1"
@@ -239,7 +236,7 @@ export default function ModelRouterAnimation() {
               x="276"
               y="152"
             >
-              decide por latencia
+              {t("nodes.routerMeta")}
             </text>
           </g>
 
@@ -282,7 +279,7 @@ export default function ModelRouterAnimation() {
               y="40"
             />
             <text fill="#fafafa" fontSize="13" fontWeight="600" x="576" y="66">
-              Modelo rápido
+              {t("nodes.fast")}
             </text>
             <text
               fill="#a1a1a1"
@@ -307,7 +304,7 @@ export default function ModelRouterAnimation() {
               y="200"
             />
             <text fill="#fafafa" fontSize="13" fontWeight="600" x="576" y="226">
-              Modelo potente
+              {t("nodes.strong")}
             </text>
             <text
               fill="#a1a1a1"
