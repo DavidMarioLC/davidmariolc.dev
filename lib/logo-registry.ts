@@ -22,6 +22,8 @@ import { Notion } from "@/components/ui/svgs/notion";
 import { Playwright } from "@/components/ui/svgs/playwright";
 import { Postgresql } from "@/components/ui/svgs/postgresql";
 import { Python } from "@/components/ui/svgs/python";
+import { ReactDark } from "@/components/ui/svgs/reactDark";
+import { Reactquery } from "@/components/ui/svgs/reactquery";
 import { SanityDark } from "@/components/ui/svgs/sanityDark";
 import { ShadcnUiDark } from "@/components/ui/svgs/shadcnUiDark";
 import { Slack } from "@/components/ui/svgs/slack";
@@ -66,6 +68,8 @@ const LOGOS = {
   playwright: Playwright,
   postgresql: Postgresql,
   python: Python,
+  react: ReactDark,
+  reactquery: Reactquery,
   sanity: SanityDark,
   shadcn: ShadcnUiDark,
   slack: Slack,
