@@ -65,7 +65,7 @@ export async function SiteFooter() {
 
   return (
     <footer className="border-border border-t">
-      <div className="mx-auto grid w-full max-w-2xl grid-cols-2 gap-8 px-6 py-12">
+      <div className="mx-auto grid w-full max-w-3xl grid-cols-2 gap-8 px-6 py-12">
         <FooterColumn
           heading={t("social")}
           links={withLabels(profile.social)}

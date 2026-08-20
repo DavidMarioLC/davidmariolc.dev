@@ -29,7 +29,7 @@ export default async function GlobalNotFound() {
     >
       <body className="min-h-svh bg-background font-sans text-foreground">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <main className="mx-auto w-full max-w-2xl space-y-4 px-6 py-16">
+          <main className="mx-auto w-full max-w-3xl space-y-4 px-6 py-16">
             <h1 className="text-2xl">{t("title")}</h1>
             <p className="text-muted-foreground">{t("description")}</p>
             <Link
