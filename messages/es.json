@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "projects": "Proyectos",
+    "books": "Libros",
+    "setup": "Setup",
+    "posts": "Posts",
+    "skipToContent": "Saltar al contenido",
+    "primary": "Principal"
+  },
+  "language": {
+    "label": "Idioma",
+    "en": "Inglés",
+    "es": "Español",
+    "current": "Idioma actual: {language}",
+    "switchTo": "Cambiar a {language}",
+    "notTranslated": "Esta página todavía no está disponible en español."
+  },
+  "footer": {
+    "social": "Social",
+    "community": "Comunidad",
+    "externalLink": "{name} (se abre en una pestaña nueva)"
+  },
+  "home": {
+    "projects": "Proyectos",
+    "posts": "Posts",
+    "achievements": "Logros",
+    "community": "Comunidad",
+    "viewAll": "Ver todo",
+    "viewAllOf": "Ver todo: {section}",
+    "viewProject": "Ver proyecto",
+    "postsEmptyTitle": "Muy pronto…",
+    "postsEmptyDescription": "Estoy escribiendo los primeros posts. Vuelve en unos días.",
+    "achievementsEmpty": "Todavía no hay logros publicados.",
+    "communityEmpty": "Todavía no hay actividad de comunidad publicada."
+  },
+  "projects": {
+    "title": "Proyectos",
+    "subtitle": "Cosas que he diseñado, construido y publicado.",
+    "empty": "Todavía no hay proyectos publicados.",
+    "stack": "Stack",
+    "live": "Visitar sitio",
+    "repository": "Código fuente"
+  },
+  "posts": {
+    "title": "Posts",
+    "subtitle": "Notas sobre construir software.",
+    "empty": "Todavía no hay posts publicados.",
+    "readingTime": "{minutes} min de lectura",
+    "tags": "Etiquetas",
+    "taggedWith": "Posts con la etiqueta «{tag}»",
+    "backToPosts": "Volver a los posts"
+  },
+  "books": {
+    "title": "Libros",
+    "subtitle": "Lo que estoy leyendo, lo que ya leí y lo que viene.",
+    "intro": "Libros que han moldeado cómo pienso y cómo construyo software.",
+    "reading": "Leyendo ahora",
+    "read": "Ya leídos",
+    "wishlist": "En la lista",
+    "cover": "{title}, de {author}",
+    "empty": "Todavía no hay libros listados."
+  },
+  "setup": {
+    "title": "Setup",
+    "subtitle": "El hardware y el software que uso para trabajar y construir proyectos.",
+    "hardware": "Hardware",
+    "stack": "Stack y herramientas",
+    "editor": "Editor y terminal",
+    "apps": "Apps del día a día",
+    "empty": "Todavía no hay nada listado."
+  },
+  "achievements": {
+    "title": "Logros",
+    "subtitle": "Competencias y programas en los que he participado.",
+    "empty": "Todavía no hay logros publicados."
+  },
+  "community": {
+    "title": "Comunidad",
+    "subtitle": "Eventos y personas fuera del editor.",
+    "empty": "Todavía no hay actividad de comunidad publicada."
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe o fue movida.",
+    "backHome": "Volver al inicio"
+  },
+  "error": {
+    "title": "Algo salió mal",
+    "description": "Ocurrió un error inesperado al renderizar esta página.",
+    "retry": "Reintentar",
+    "backHome": "Volver al inicio"
+  },
+  "code": {
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyLabel": "Copiar el código al portapapeles",
+    "copyFailed": "No se pudo copiar"
+  },
+  "callout": {
+    "tip": "Consejo",
+    "info": "Nota",
+    "warning": "Advertencia"
+  },
+  "playground": {
+    "label": "Playground",
+    "reset": "Reiniciar",
+    "loading": "Cargando el playground…"
+  },
+  "toc": {
+    "label": "En esta página",
+    "summary": "En esta página"
+  },
+  "table": {
+    "label": "Tabla",
+    "scrollHint": "Tabla desplazable"
+  },
+  "series": {
+    "label": "Serie",
+    "partOf": "Parte {current} de {total}",
+    "comingSoon": "Próximamente",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "currentPart": "Estás aquí"
+  },
+  "challenge": {
+    "reveal": "Ver respuesta"
+  }
+}

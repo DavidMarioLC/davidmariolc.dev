@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "books": "Books",
+    "setup": "Setup",
+    "posts": "Posts",
+    "skipToContent": "Skip to content",
+    "primary": "Primary"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "es": "Spanish",
+    "current": "Current language: {language}",
+    "switchTo": "Switch to {language}",
+    "notTranslated": "This page is not available in English yet."
+  },
+  "footer": {
+    "social": "Social",
+    "community": "Community",
+    "externalLink": "{name} (opens in a new tab)"
+  },
+  "home": {
+    "projects": "Projects",
+    "posts": "Posts",
+    "achievements": "Achievements",
+    "community": "Community",
+    "viewAll": "View all",
+    "viewAllOf": "View all {section}",
+    "viewProject": "View project",
+    "postsEmptyTitle": "Coming soon…",
+    "postsEmptyDescription": "I'm writing the first posts. Check back in a few days.",
+    "achievementsEmpty": "No achievements published yet.",
+    "communityEmpty": "No community activity published yet."
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Things I have designed, built and shipped.",
+    "empty": "No projects published yet.",
+    "stack": "Stack",
+    "live": "Visit site",
+    "repository": "Source code"
+  },
+  "posts": {
+    "title": "Posts",
+    "subtitle": "Notes on building software.",
+    "empty": "No posts published yet.",
+    "readingTime": "{minutes} min read",
+    "tags": "Tags",
+    "taggedWith": "Posts tagged “{tag}”",
+    "backToPosts": "Back to posts"
+  },
+  "books": {
+    "title": "Books",
+    "subtitle": "What I'm currently reading, what I've already read, and what's next.",
+    "intro": "Books that have shaped how I think and how I build software.",
+    "reading": "Currently reading",
+    "read": "Already read",
+    "wishlist": "On the list",
+    "cover": "{title} by {author}",
+    "empty": "No books listed yet."
+  },
+  "setup": {
+    "title": "Setup",
+    "subtitle": "The hardware and software I use to work and build projects.",
+    "hardware": "Hardware",
+    "stack": "Stack and tools",
+    "editor": "Editor and terminal",
+    "apps": "Daily apps",
+    "empty": "Nothing listed yet."
+  },
+  "achievements": {
+    "title": "Achievements",
+    "subtitle": "Competitions and programs I have taken part in.",
+    "empty": "No achievements published yet."
+  },
+  "community": {
+    "title": "Community",
+    "subtitle": "Events and people outside of the editor.",
+    "empty": "No community activity published yet."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or was moved.",
+    "backHome": "Back home"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred while rendering this page.",
+    "retry": "Try again",
+    "backHome": "Back home"
+  },
+  "code": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyLabel": "Copy code to clipboard",
+    "copyFailed": "Could not copy"
+  },
+  "callout": {
+    "tip": "Tip",
+    "info": "Note",
+    "warning": "Warning"
+  },
+  "playground": {
+    "label": "Playground",
+    "reset": "Reset",
+    "loading": "Loading the playground…"
+  },
+  "toc": {
+    "label": "On this page",
+    "summary": "On this page"
+  },
+  "table": {
+    "label": "Table",
+    "scrollHint": "Scrollable table"
+  },
+  "series": {
+    "label": "Series",
+    "partOf": "Part {current} of {total}",
+    "comingSoon": "Coming soon",
+    "previous": "Previous",
+    "next": "Next",
+    "currentPart": "You are here"
+  },
+  "challenge": {
+    "reveal": "Show answer"
+  }
+}
