@@ -110,12 +110,29 @@ const posts = defineCollection({
     .transform(withLocaleAndSlug),
 });
 
+/**
+ * One category per project, as a slug: the visible label is translated in
+ * `messages/<locale>.json`, so both locales of a project carry the same value.
+ */
+const PROJECT_CATEGORIES = [
+  "web-app",
+  "landing-page",
+  "website",
+  "mobile-app",
+  "backend",
+  "api",
+  "tooling",
+  "library",
+  "design-system",
+] as const;
+
 const projects = defineCollection({
   name: "Project",
   pattern: "projects/*/*.mdx",
   schema: s
     .object({
       ...prose,
+      category: s.enum(PROJECT_CATEGORIES),
       date: isoDate,
       featured: s.boolean().default(false),
       links: s
@@ -127,6 +144,8 @@ const projects = defineCollection({
       order: s.number().int().default(0),
       preview: cloudinaryImage,
       stack: s.array(brandRef).default([]),
+      /** `real` is shipped work; `learning` is a project built to learn something. */
+      type: s.enum(["real", "learning"]),
     })
     .transform(withLocaleAndSlug),
 });
