@@ -7,3 +7,102 @@
     alt: Portada de Refactoring UI
     width: 758
     height: 1014
+- slug: system-design-interview
+  title: System Design Interview
+  author: Alex Xu
+  status: reading
+  cover:
+    publicId: portfolio/books/system-design-interview
+    alt: Portada de System Design Interview
+    width: 750
+    height: 1061
+- slug: decoding-technical-interview
+  title: De-Coding the Technical Interview Process
+  author: Emma Bostian
+  status: reading
+  cover:
+    publicId: portfolio/books/decoding-technical-interview
+    alt: Portada de De-Coding the Technical Interview Process
+    width: 754
+    height: 1068
+- slug: building-large-scale-web-apps
+  title: Building Large Scale Web Apps
+  author: Addy Osmani y Hassan Djirdeh
+  status: read
+  cover:
+    publicId: portfolio/books/building-large-scale-web-apps
+    alt: Portada de Building Large Scale Web Apps
+    width: 1600
+    height: 2264
+- slug: software-engineer-soft-parts
+  title: "Software Engineering: The Soft Parts"
+  author: Addy Osmani
+  status: read
+  cover:
+    publicId: portfolio/books/software-engineer-soft-parts
+    alt: "Portada de Software Engineering: The Soft Parts"
+    width: 862
+    height: 1360
+- slug: learning-git
+  title: Aprendiendo Git
+  author: Miguel Ángel Durán
+  status: read
+  cover:
+    publicId: portfolio/books/learning-git
+    alt: Portada de Aprendiendo Git
+    width: 816
+    height: 1065
+- slug: patterns
+  title: Learning Patterns
+  author: Lydia Hallie y Addy Osmani
+  status: read
+  cover:
+    publicId: portfolio/books/patterns
+    alt: Portada de Learning Patterns
+    width: 400
+    height: 517
+- slug: frontend-testing
+  title: Frontend Testing
+  author: iagolast
+  status: read
+  cover:
+    publicId: portfolio/books/frontend-testing
+    alt: Portada de Frontend Testing
+    width: 707
+    height: 1061
+- slug: design-patterns
+  title: Head First Design Patterns
+  author: Eric Freeman y Elisabeth Robson
+  status: wishlist
+  cover:
+    publicId: portfolio/books/design-patterns
+    alt: Portada de Head First Design Patterns
+    width: 1297
+    height: 1500
+- slug: software-architecture-hard-parts
+  title: "Software Architecture: The Hard Parts"
+  author: Neal Ford, Mark Richards, Pramod Sadalage y Zhamak Dehghani
+  status: wishlist
+  cover:
+    publicId: portfolio/books/software-architecture-hard-parts
+    alt: "Portada de Software Architecture: The Hard Parts"
+    width: 720
+    height: 945
+- slug: designing-data-intensive-applications
+  title: Designing Data-Intensive Applications
+  author: Martin Kleppmann
+  status: wishlist
+  cover:
+    publicId: portfolio/books/designing-data-intensive-applications
+    alt: Portada de Designing Data-Intensive Applications
+    width: 1143
+    height: 1500
+- slug: building-microservices
+  title: Building Microservices
+  author: Sam Newman
+  status: wishlist
+  cover:
+    publicId: portfolio/books/building-microservices
+    alt: Portada de Building Microservices
+    width: 720
+    height: 945
