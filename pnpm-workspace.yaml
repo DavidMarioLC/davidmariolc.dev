@@ -7,3 +7,6 @@ allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
   esbuild: true
+  # Transitive dep of sandpack; its install script only prints a funding
+  # notice, so there is nothing to build.
+  es5-ext: false

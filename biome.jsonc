@@ -7,6 +7,13 @@
   ],
   "overrides": [
     {
+      // Static assets and generated content output, not source.
+      "includes": ["public/**", ".velite/**"],
+      "formatter": { "enabled": false },
+      "linter": { "enabled": false },
+      "assist": { "enabled": false }
+    },
+    {
       "includes": ["components/ui/**"],
       "formatter": {
         "enabled": false
