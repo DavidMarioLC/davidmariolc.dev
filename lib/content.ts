@@ -1,3 +1,4 @@
+import type { Project } from "#site/content";
 import {
   achievements,
   books,
@@ -98,6 +99,25 @@ export function getProjects(locale: Locale) {
 
 export function getProject(locale: Locale, slug: string) {
   return getProjects(locale).find((project) => project.slug === slug);
+}
+
+export type ProjectCategory = Project["category"];
+
+export function getProjectsByCategory(locale: Locale, category: string) {
+  return getProjects(locale).filter((project) => project.category === category);
+}
+
+/**
+ * Every category that has at least one published project, for the category
+ * routes and the index navigation. Sorted by slug so the order is the same in
+ * both locales and stable between builds.
+ */
+export function getProjectCategories(locale: Locale) {
+  const categories = new Set(
+    getProjects(locale).map((project) => project.category)
+  );
+
+  return [...categories].sort((a, b) => a.localeCompare(b));
 }
 
 const FEATURED_PROJECT_LIMIT = 3;

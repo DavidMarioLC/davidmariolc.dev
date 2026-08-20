@@ -41,6 +41,9 @@
     "stack": "Stack",
     "live": "Visitar sitio",
     "repository": "Código fuente",
+    "inCategory": "Proyectos de {category}",
+    "backToProjects": "Volver a los proyectos",
+    "browseByCategory": "Explorar proyectos por categoría",
     "type": {
       "real": "Trabajo entregado",
       "learning": "Proyecto de aprendizaje"

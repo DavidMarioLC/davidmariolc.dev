@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import type { Project } from "#site/content";
+import { Link } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,7 +22,12 @@ export function ProjectMeta({
 
   return (
     <p className={cn("font-mono text-muted-foreground text-xs", className)}>
-      <span>{t(`category.${category}`)}</span>
+      <Link
+        className="underline underline-offset-4 hover:text-foreground"
+        href={`/projects/categories/${category}`}
+      >
+        {t(`category.${category}`)}
+      </Link>
       <span aria-hidden="true"> · </span>
       <span>{t(`type.${type}`)}</span>
     </p>

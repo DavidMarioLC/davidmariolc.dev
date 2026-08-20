@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ProjectCard } from "@/components/home/project-card";
-import { routing } from "@/i18n/routing";
-import { getProjects, isLocale } from "@/lib/content";
+import { Link, routing } from "@/i18n/routing";
+import { getProjectCategories, getProjects, isLocale } from "@/lib/content";
 import { pageMetadata } from "@/lib/metadata";
 
 export function generateStaticParams() {
@@ -46,6 +46,7 @@ export default async function ProjectsPage({
   const t = await getTranslations("projects");
   const tHome = await getTranslations("home");
   const projects = getProjects(locale);
+  const categories = getProjectCategories(locale);
 
   return (
     <div className="space-y-10">
@@ -53,6 +54,23 @@ export default async function ProjectsPage({
         <h1 className="font-mono text-2xl">{t("title")}</h1>
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </header>
+
+      {categories.length > 0 && (
+        <nav aria-label={t("browseByCategory")}>
+          <ul className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <li key={category}>
+                <Link
+                  className="inline-block rounded-md border border-border px-3 py-1 font-mono text-sm hover:bg-accent"
+                  href={`/projects/categories/${category}`}
+                >
+                  {t(`category.${category}`)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
       {projects.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t("empty")}</p>

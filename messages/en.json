@@ -41,6 +41,9 @@
     "stack": "Stack",
     "live": "Visit site",
     "repository": "Source code",
+    "inCategory": "Projects in {category}",
+    "backToProjects": "Back to projects",
+    "browseByCategory": "Browse projects by category",
     "type": {
       "real": "Shipped work",
       "learning": "Learning project"

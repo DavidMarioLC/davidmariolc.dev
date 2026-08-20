@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
 import {
   getPosts,
+  getProjectCategories,
   getProjects,
   getTags,
   LOCALES,
@@ -66,11 +67,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   );
 
+  const categories = routing.locales.flatMap((locale) =>
+    getProjectCategories(locale).map((category) => ({
+      url: absoluteUrl(locale, `/projects/categories/${category}`),
+    }))
+  );
+
   const tags = routing.locales.flatMap((locale) =>
     getTags(locale).map((tag) => ({
       url: absoluteUrl(locale, `/posts/tags/${tag}`),
     }))
   );
 
-  return [...pages, ...posts, ...projects, ...tags];
+  return [...pages, ...posts, ...projects, ...categories, ...tags];
 }
