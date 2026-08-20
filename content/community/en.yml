@@ -1,0 +1,32 @@
+- slug: gdg-ica
+  title: GDG Ica
+  date: 2026-05-01
+  image:
+    publicId: portfolio/gallery/gdg-ica
+    alt: GDG Ica community board
+    width: 2296
+    height: 4080
+- slug: build-with-ai-2026
+  title: Build With AI 2026
+  date: 2026-05-01
+  image:
+    publicId: portfolio/gallery/build-with-ai-2026
+    alt: Attendees at Build With AI 2026
+    width: 6000
+    height: 4000
+- slug: devfest-2025
+  title: DevFest 2025
+  date: 2025-11-01
+  image:
+    publicId: portfolio/gallery/devfest-2025
+    alt: Group photo at DevFest 2025
+    width: 6000
+    height: 3368
+- slug: david
+  title: David
+  date: 2025-11-01
+  image:
+    publicId: portfolio/gallery/david
+    alt: David Licla speaking on stage at DevFest 2025
+    width: 6000
+    height: 3368

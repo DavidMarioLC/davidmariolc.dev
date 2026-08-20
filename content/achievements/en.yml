@@ -1,0 +1,10 @@
+- slug: nasa-space-apps-2025
+  name: NASA Space Apps Challenge
+  participation: Participation
+  year: 2025
+  logo:
+    publicId: portfolio/achievements/nasa
+    alt: NASA
+    width: 96
+    height: 96
+  url: https://www.spaceappschallenge.org

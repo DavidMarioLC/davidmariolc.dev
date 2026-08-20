@@ -1,0 +1,15 @@
+- block: hardware
+  order: 1
+  label: Laptop
+  value: MacBook Pro 14" M1
+- block: stack
+  order: 1
+  label: Lenguaje
+  entries:
+    - name: TypeScript
+      logo: typescript
+- block: editor
+  order: 3
+  label: Tema
+  entries:
+    - name: Dark 2026

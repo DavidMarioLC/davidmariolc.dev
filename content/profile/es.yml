@@ -1,0 +1,64 @@
+name: David Licla
+country: Perú
+countryFlag: "🇵🇪"
+avatar:
+  publicId: portfolio/me/avatar
+  alt: David Licla
+  width: 96
+  height: 96
+intro:
+  - runs:
+      - text: "Soy ingeniero de software en "
+      - text: Forma
+        logo: forma
+        url: https://forma.pe
+      - text: " y organizador de "
+      - text: GDG Ica
+        logo: gdg
+        url: https://gdg.community.dev/gdg-ica
+      - text: "."
+  - runs:
+      - text: "Construyo productos de principio a fin: de la idea a producción. Mi stack principal es "
+      - text: Next.js
+        logo: nextjs
+        url: https://nextjs.org
+      - text: ", "
+      - text: TypeScript
+        logo: typescript
+        url: https://www.typescriptlang.org
+      - text: ", "
+      - text: Supabase
+        logo: supabase
+        url: https://supabase.com
+      - text: " y "
+      - text: PostgreSQL
+        logo: postgresql
+        url: https://www.postgresql.org
+      - text: "."
+  - runs:
+      - text: "Me gusta aprender sobre otras áreas como backend, infraestructura y diseño. No busco dominarlas, sino entender cómo encaja cada pieza para "
+      - text: "construir un mejor producto ✨"
+        emphasis: true
+      - text: "."
+communityIntro: >-
+  Fuera del código, formo parte del equipo organizador de la comunidad Google
+  Developer Groups en Ica, Perú. Ahí dedico tiempo a organizar eventos, mentorear
+  a desarrolladores locales y ayudar a construir una cultura donde aprender sea
+  parte del día a día, no la excepción.
+social:
+  - name: "@davidmariolc"
+    logo: x
+    url: https://x.com/davidmariolc
+  - name: davidmariolc
+    logo: github
+    url: https://github.com/davidmariolc
+  - name: davidmariolc
+    logo: linkedin
+    url: https://www.linkedin.com/in/davidmariolc
+community:
+  - name: gdgica
+    logo: gdg
+    url: https://gdg.community.dev/gdg-ica
+  - name: Google Developers Group
+    logo: google
+    url: https://developers.google.com/community/gdg

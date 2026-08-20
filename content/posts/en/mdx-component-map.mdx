@@ -1,0 +1,25 @@
+---
+title: An MDX component map is a contract
+description: Registering every component a body may use turns a broken article into a broken build, which is the failure you want.
+date: 2026-08-20
+series: content-pipeline
+seriesOrder: 2
+tags:
+  - mdx
+  - velite
+---
+
+## The map
+
+Velite compiles MDX to a function body. Rendering it means handing that function
+a map of the components a body is allowed to use.
+
+## Why it is a contract
+
+An unregistered component is not a missing style, it is a build error that names
+the post and the component. That is the whole point.
+
+## What it cannot catch
+
+The map validates names, not props. A `<Callout type="danger" />` with no such
+variant still renders — types catch that, the map does not.

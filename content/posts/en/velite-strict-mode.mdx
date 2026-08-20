@@ -1,0 +1,188 @@
+---
+title: Velite exits 0 when your content is broken
+description: A content pipeline that drops invalid records and reports success is worse than one that fails, because the site still builds and quietly ships incomplete.
+date: 2026-08-19
+series: content-pipeline
+seriesOrder: 1
+tags:
+  - velite
+  - nextjs
+  - content
+---
+
+While wiring Velite into this site I hit something worth writing down: by default,
+a schema validation failure does not fail the build.
+
+## What happens
+
+Remove a required field from a piece of content and run the build. Velite prints
+the error, drops the record, and exits `0`:
+
+```text
+[VELITE] issues:
+content/projects/en/sqm-nutrition.mdx
+ error Required  title
+
+✖ 1 error
+[VELITE] build finished in 168ms
+```
+
+The word "finished" is doing a lot of work there. The project is gone from the
+output, the exit code says everything is fine, and `velite && next build` happily
+moves on to build a site that is missing a page.
+
+## Why it matters
+
+The failure mode is the dangerous kind: **silent and partial**. A build that
+crashes gets fixed in minutes. A build that succeeds while dropping one item in
+twenty gets noticed weeks later, by a visitor.
+
+<Callout type="info" title="One source, three surfaces">
+  On this site [the listing](/posts), the sitemap and the RSS feed all read the same
+  collection. That is deliberate: a draft disappears from all three at once,
+  with no parallel lists to fall out of sync. The flip side is that anything
+  dropped during compilation disappears from all three at once too, and nothing
+  downstream can tell the difference between "unpublished" and "lost".
+</Callout>
+
+It also breaks an assumption that is easy to make. If the content is the source of
+truth for the listing, the sitemap and the feed, then "the content compiled" has
+to mean "all of it compiled".
+
+## The fix
+
+[Velite](https://velite.js.org) takes a `strict` flag. Put it in the script, not the config:
+
+```json title="package.json"
+{
+  "scripts": {
+    "build": "velite && next build" // [!code --]
+    "build": "velite --strict && next build" // [!code ++]
+  }
+}
+```
+
+<Callout type="warning" title="The config field is not the flag">
+  Setting `strict: true` inside `velite.config.ts` had no effect for me — the
+  build still exited `0` on a broken file. Only the CLI flag changed the exit
+  code. If you configure it and move on, you get the silent failure you were
+  trying to prevent, plus the false confidence that you handled it.
+</Callout>
+
+The three ways this can be configured, and what each one actually does:
+
+| Setting | Where it goes | Exit code | Invalid record |
+| :--- | :--- | :---: | :--- |
+| nothing | — | `0` | dropped, build continues |
+| `strict: true` | `velite.config.ts` | `0` | dropped, build continues |
+| `--strict` | the `build` script | `1` | build stops |
+
+With `--strict`, the same broken file now exits `1`:
+
+```text
+✖ 1 error
+[VELITE] Schema validation failed.
+```
+
+<CommandCompare
+  caption="The same broken file, with and without the flag."
+  variants={[
+    {
+      label: "velite",
+      command: "velite && next build",
+      output: "\u2716 1 error\n[VELITE] build finished in 168ms",
+      exitCode: 0,
+    },
+    {
+      label: "velite --strict",
+      command: "velite --strict && next build",
+      output: "\u2716 1 error\n[VELITE] Schema validation failed.",
+      exitCode: 1,
+    },
+  ]}
+/>
+
+## Try the failure mode
+
+The point is not the flag, it is the shape of the failure. Here it is in
+miniature: a "pipeline" that drops what it cannot parse and reports success
+anyway. Change `parse` to return `null` on bad input and watch the summary keep
+saying everything is fine.
+
+<VanillaPlayground
+  title="Silent partial failure"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, monospace; padding: 12px; margin: 0 }
+#out { white-space: pre-wrap; line-height: 1.6 }`}
+  js={`const input = ["2025-06-01", "not-a-date", "2026-02-01"];
+
+// Drops what it cannot parse and says nothing.
+function parse(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+const parsed = input.map(parse).filter(Boolean);
+
+document.getElementById("out").textContent = [
+  "input:  " + input.length + " records",
+  "output: " + parsed.length + " records",
+  "",
+  "build finished ✔  (exit 0)",
+].join("\\n");`}
+/>
+
+## The part I nearly missed
+
+While testing this I found a second, quieter problem. Before reading on: a post
+declares `date: not-a-date` instead of an ISO date. Every other field is fine.
+What does the build print?
+
+<Challenge summary="Show what it printed">
+  Three words. No file, no field:
+
+  ```text
+  [VELITE] Invalid time value
+  ```
+
+  Not `content/posts/en/whatever.mdx`. Not `date`. Just the message, and a
+  hundred files to search by hand.
+</Challenge>
+
+The cause is that `s.isodate()` throws a raw `RangeError` rather than adding a
+schema issue, so it escapes the error reporting that names the file and the
+field for every other kind of mistake. Doing the validation inside the transform
+gives that back:
+
+```ts
+const isoDate = s.string().transform((value, ctx) => {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    ctx.addIssue({ code: "custom", message: "Expected an ISO date" });
+    return z.NEVER;
+  }
+
+  return parsed.toISOString();
+});
+```
+
+Now the error names both:
+
+```text
+content/projects/en/sqm-nutrition.mdx
+ info Expected an ISO date  date
+```
+
+<Callout type="tip" title="Check yours in two minutes">
+  Delete a required field from one piece of content and run your build. Then
+  look at the **exit code**, not at the output:
+
+  ```bash
+  npx velite; echo "exit=$?"
+  ```
+
+  If it prints `exit=0` while reporting an error — the case from [what
+  happens](#what-happens) — your pipeline is dropping
+  records and your deploy pipeline has no way to notice.
+</Callout>
