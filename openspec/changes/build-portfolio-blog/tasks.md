@@ -56,13 +56,13 @@
 - [x] 4.6 Añadir etiquetas: mostradas en índice y detalle, con página de posts por etiqueta
 - [x] 4.7 Escribir un primer post real en ambos idiomas que ejercite código, imágenes, encabezados y un componente embebido
 
-## 5. Fase 5 — Books, Setup, Community y Achievements
+## 5. Fase 5 — Books y Setup
 
 - [ ] 5.1 Crear `app/[locale]/books/page.tsx`: cabecera con título, subtítulo e intro; los tres grupos de estado de lectura en orden fijo; rejilla de portadas en cards con la alternativa textual construida desde título y autor; grupos vacíos omitidos
 - [ ] 5.2 Crear `app/[locale]/setup/page.tsx`: cabecera con título y subtítulo, bloque de hardware como rejilla de cards etiqueta/valor, y los bloques de stack, editor y apps como filas categoría → entradas con logotipo opcional y sin enlaces
-- [ ] 5.3 Crear el índice completo de comunidad, de la actividad más reciente a la más antigua
-- [ ] 5.4 Crear el índice completo de logros, con las filas sin URL como informativas
-- [ ] 5.5 Poblar el contenido real de las cuatro secciones en ambos idiomas
+- [x] 5.3 Enlazar la sección de comunidad del home al sitio de la comunidad, con la URL declarada en el contenido y tratamiento de enlace externo
+- [x] 5.4 Confirmar que los logros se listan completos en el home, sin página de índice aparte
+- [ ] 5.5 Poblar el contenido real de Books y Setup en ambos idiomas
 - [ ] 5.6 Verificar que cada sección sin contenido en un idioma muestra su estado vacío traducido y no un 404
 
 ## 6. Fase 6 — SEO, sindicación y cierre

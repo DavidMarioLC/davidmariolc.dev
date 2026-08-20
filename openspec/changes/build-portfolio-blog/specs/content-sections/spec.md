@@ -52,15 +52,19 @@ Los bloques de stack y herramientas, editor y terminal, y aplicaciones de uso di
 - **WHEN** una categoría tiene varias entradas
 - **THEN** se muestran todas en la misma fila, separadas de forma legible y sin desbordar horizontalmente la página
 
-### Requirement: Índice de comunidad
-El sitio DEBE ofrecer un índice completo de las actividades de comunidad, más allá de las mostradas en el home, cada una con su imagen, título y fecha.
+### Requirement: Comunidad enlazada a su propio sitio
+La galería de comunidad del home DEBE enlazar al sitio de la comunidad, no a un índice dentro de este sitio. El destino DEBE venir del contenido y abrirse en una pestaña nueva, señalado como enlace externo.
 
-#### Scenario: Índice completo
-- **WHEN** hay más actividades de comunidad de las que muestra el home
-- **THEN** el índice las lista todas, de la más reciente a la más antigua
+#### Scenario: Enlace al sitio de la comunidad
+- **WHEN** el perfil declara la URL de la comunidad
+- **THEN** el enlace "ver todo" apunta a esa URL absoluta, se abre en pestaña nueva con `rel` seguro y muestra el indicador de enlace externo
 
-### Requirement: Índice de logros
-El sitio DEBE ofrecer la lista completa de logros con su logotipo, nombre, tipo de participación, año y referencia externa cuando exista.
+#### Scenario: Perfil sin URL de comunidad
+- **WHEN** el perfil no declara la URL
+- **THEN** la sección se muestra sin enlace, en lugar de apuntar a una ruta inexistente
+
+### Requirement: Logros listados en el home
+La lista de logros DEBE mostrarse completa en el home, con logotipo, nombre, tipo de participación, año y referencia externa cuando exista. No DEBE existir una página de índice aparte mientras el home los muestre todos.
 
 #### Scenario: Logro sin referencia
 - **WHEN** un logro no declara URL
