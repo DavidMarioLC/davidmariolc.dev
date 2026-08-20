@@ -170,3 +170,43 @@ Antes de escribir código, clasifica la petición. No empieces a editar archivos
 Pregunta en una línea antes de empezar: *"Esto lo veo como candidato a OpenSpec por X — ¿lo propongo o lo hago directo?"* La salida por defecto es preguntar, **no** proponer un spec por si acaso. Una propuesta de OpenSpec para un cambio de 5 líneas es fricción, no rigor.
 
 Si el usuario dice "hazlo directo", se hace directo — la clasificación es una recomendación, no un veto.
+
+---
+
+# Iconos
+
+Dos fuentes, sin mezclarlas:
+
+- **Logos de tecnologías y marcas** (React, Next.js, TypeScript, Tailwind, etc.): **svgl** — https://svgl.app. Es la única fuente para logos de marca; no dibujes SVGs a mano ni copies de otros sitios.
+- **Iconos de interfaz** (flechas, menú, cerrar, sol/luna…): `lucide-react`, ya instalado y declarado como `iconLibrary` en `components.json`.
+
+## svgl se instala con el CLI de shadcn
+
+El registro `@svgl` ya está declarado en `components.json`:
+
+```json
+"registries": {
+  "@svgl": "https://svgl.app/r/{name}.json"
+}
+```
+
+Para añadir un logo (uno o varios de golpe):
+
+```bash
+pnpm dlx shadcn@latest add @svgl/react @svgl/nextjs
+```
+
+Nunca `npx`/`bunx`: en este repo el gestor es pnpm.
+
+## Qué genera
+
+- Los componentes caen en `components/ui/svgs/`, un archivo `.tsx` por variante: `reactLight.tsx`, `reactDark.tsx`, `reactWordmarkLight.tsx`, `reactWordmarkDark.tsx`…
+- Cada componente es `(props: SVGProps<SVGSVGElement>)` con los colores de marca inline y **sin tamaño por defecto**: hay que pasar `className` (p. ej. `className="size-6"`) o `width`/`height` en el punto de uso.
+- Son archivos generados: no los edites a mano. Si necesitas otra variante, instálala desde el registro.
+
+## Reglas de uso
+
+- Elige la variante `Light`/`Dark` según el tema, no fuerces colores con CSS sobre el logo. Con `next-themes` ya disponible, resuelve la variante en el componente que lo consume.
+- Usa `Wordmark` solo cuando quepa el nombre completo; para grids de tecnologías, el icono suelto.
+- Respeta la licencia/trademark de cada marca: se usan como referencia a la tecnología, sin modificar el logo.
+- No hagas fetch en runtime a `api.svgl.app` ni cargues los logos con `<img>` remoto: todo va inline vía el CLI.
