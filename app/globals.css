@@ -234,7 +234,10 @@
     font-size: 0.875em;
     @apply grid font-mono;
   }
-  .prose [data-line] {
+  /* Scoped to `pre`: rehype-pretty-code wraps *inline* code in a `[data-line]`
+     too, and unscoped this gutter padded every `code` in a paragraph by a full
+     rem on each side. */
+  .prose pre [data-line] {
     @apply border-transparent border-l-2 px-4;
   }
 
