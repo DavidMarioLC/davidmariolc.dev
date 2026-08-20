@@ -1,0 +1,203 @@
+---
+title: ¿Por qué tu subclase pasa todos los tests y rompe producción igual?
+description: 'El tercer principio de SOLID vigila algo que el compilador no ve: que el sustituto cumpla las promesas que hizo el original.'
+date: 2026-08-22
+draft: true
+series: solid
+seriesOrder: 3
+tags:
+  - solid
+  - typescript
+  - arquitectura
+---
+
+Seguimos en Tostaduría Norte, con la regleta de métodos de pago del post anterior. El panel de devoluciones hace esto y no le pregunta a nadie:
+
+```ts title="src/refunds.ts"
+for (const receipt of pendingRefunds) {
+  const method = methodFor(receipt.methodId);
+  await method.refund(receipt);
+}
+```
+
+Llega la tarjeta regalo. Como no se puede devolver dinero a una tarjeta regalo, la implementas honestamente: `refund` lanza `NotSupportedError`. Escribes el test, comprueba que lanza, verde. ¿Qué se acaba de romper?
+
+## La sorpresa: el test verde era el problema
+
+El panel de devoluciones empieza a fallar con un 500 — y no solo para las tarjetas regalo. El `for` se corta en el primer pedido con tarjeta regalo y los treinta que venían detrás se quedan sin devolver.
+
+Lo incómodo es el test. Al escribir "compruebo que `refund` lanza `NotSupportedError`" no verificaste un comportamiento: **documentaste una violación de contrato y la firmaste**. Todo el que llama a `refund` lo hace mirando el tipo `PaymentMethod`, que promete devolver dinero. La tarjeta regalo dijo que era un `PaymentMethod` y luego no lo fue.
+
+## La intuición: el suplente en el mostrador
+
+Elena atiende el mostrador de Tostaduría Norte. Cuando se va de vacaciones entra un suplente, y el trato con el cliente de la fila es implícito: **no debería notar el cambio**. Si el suplente cobra, envuelve y hace devoluciones igual que Elena, la fila avanza.
+
+Ahora imagina tres suplentes distintos:
+
+- Uno pide el DNI para pagar en efectivo. Elena no lo pedía: pide **más** de lo que pedía la titular.
+- Otro acepta devoluciones pero entrega un vale en vez de dinero. Da **menos** de lo que prometía la titular.
+- El tercero se niega en redondo a hacer devoluciones. Directamente no hace el trabajo del puesto.
+
+Los tres pasarían una entrevista sobre lo que sí hacen. Los tres rompen la fila, porque el cliente venía con las expectativas del mostrador, no con las del suplente.
+
+Eso es el Principio de Sustitución de Liskov (LSP): si un tipo dice ser sustituto de otro, usarlo en su lugar no debe cambiar si el programa funciona. **Pedir más o prometer menos que el original es romperlo**, aunque compile.
+
+Abajo, la fila de devoluciones con el tercer suplente dentro.
+
+<VanillaPlayground
+  title="El suplente que no hace devoluciones"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, SFMono-Regular, monospace; padding: 12px; line-height: 1.7 }`}
+  js={`const methods = {
+  card: { refund: (r) => "Devuelto " + r.cents + " a tarjeta" },
+  cash: { refund: (r) => "Devuelto " + r.cents + " en efectivo" },
+  // El suplente que se niega. Coméntalo y mira avanzar la fila.
+  gift: { refund: () => { throw new Error("NotSupported: gift"); } },
+};
+
+const queue = [
+  { id: 1, methodId: "card", cents: 4950 },
+  { id: 2, methodId: "gift", cents: 1200 },
+  { id: 3, methodId: "cash", cents: 800 },
+];
+
+const log = [];
+try {
+  for (const r of queue) log.push("#" + r.id + " " + methods[r.methodId].refund(r));
+} catch (e) {
+  log.push("💥 " + e.message + " — la fila se detiene aquí");
+}
+document.getElementById("out").textContent = log.join("\\n");`}
+/>
+
+## El ejemplo, paso a paso
+
+El contrato del post anterior prometía dos cosas a todo el que lo usara:
+
+```ts title="src/payments/method.ts"
+export type PaymentMethod = {
+  id: string;
+  charge(cents: number): Promise<Receipt>;
+  refund(receipt: Receipt): Promise<void>;
+};
+```
+
+La implementación honesta-pero-rota es esta, y el compilador la acepta sin una queja:
+
+```ts title="src/payments/gift-card.ts"
+export const giftCard: PaymentMethod = {
+  id: "gift",
+  charge: (cents) => ledger.debit(cents),
+  refund: () => {
+    throw new NotSupportedError("Las tarjetas regalo no admiten devolución");
+  },
+};
+```
+
+Cumple la **forma** del tipo: el método existe y sus firmas encajan. Incumple el **comportamiento** que ese tipo prometía, y ahí no llega TypeScript. Un tipo describe qué puedes llamar, no qué pasa cuando lo llamas.
+
+Arreglarlo con un `if` en el que llama es tentador y es peor: mueve el conocimiento de la tarjeta regalo al panel de devoluciones, y mañana al de contabilidad, y ya estás reconstruyendo los siete `switch` del post anterior.
+
+```ts title="src/refunds.ts"
+if (receipt.methodId === "gift") continue; // [!code --]
+await method.refund(receipt);              // [!code --]
+```
+
+La corrección es hacer el tipo honesto: si devolver dinero no es algo que todo método de pago sepa hacer, no pertenece al contrato común.
+
+```ts title="src/payments/method.ts"
+export type PaymentMethod = {
+  id: string;
+  charge(cents: number): Promise<Receipt>;
+};
+
+export type Refundable = PaymentMethod & {
+  refund(receipt: Receipt): Promise<void>;
+};
+
+export const isRefundable = (m: PaymentMethod): m is Refundable =>
+  "refund" in m;
+```
+
+Ahora la tarjeta regalo declara lo que es, no lo que no puede:
+
+```ts title="src/refunds.ts"
+for (const receipt of pendingRefunds) {
+  const method = methodFor(receipt.methodId);
+  if (!isRefundable(method)) {
+    await issueStoreCredit(receipt); // decisión de negocio, visible
+    continue;
+  }
+  await method.refund(receipt);
+}
+```
+
+La rama sigue existiendo, pero ya no pregunta *quién eres* sino *qué puedes hacer*. Un método de pago nuevo que tampoco admita devolución entra sin tocar este archivo.
+
+<Callout type="info" title="El olor es un método que no hace nada">
+  Un `throw new NotSupported`, un `return null` de cortesía o un cuerpo vacío
+  con un comentario son la misma señal: alguien firmó un contrato que no podía
+  cumplir. Casi siempre el arreglo no está en la implementación, está en el tipo.
+</Callout>
+
+## Ahora tú
+
+La tarjeta prepago sí admite devolución, pero puede quedarse sin saldo al cobrar:
+
+```ts title="src/payments/prepaid.ts"
+export const prepaid: Refundable = {
+  id: "prepaid",
+  charge(cents) {
+    if (cents > this.balance) throw new InsufficientFunds();
+    return ledger.debit(cents);
+  },
+  // refund: ...
+};
+```
+
+Lanzar cuando no hay saldo es comportamiento de negocio legítimo. ¿Viola LSP o no?
+
+<Challenge summary="Ver el criterio">
+  Depende de si el contrato ya contemplaba fallar al cobrar.
+
+  Si `charge` prometía "devuelve un `Receipt` o falla si el cobro no se
+  completa", la prepago no pide nada extra: falla por una razón nueva dentro de
+  un modo de fallo que el que llama ya manejaba. No hay violación.
+
+  Si `charge` prometía "siempre devuelve un `Receipt`" y el resto de métodos
+  nunca fallaban, la prepago acaba de **fortalecer la precondición**: ahora hay
+  que tener saldo suficiente, y quien la llama no tenía forma de saberlo. Eso
+  es el suplente que pide el DNI.
+
+  El arreglo no es quitar el `throw`: es subirlo al contrato, para que todos los
+  que llaman lo vean. Un tipo de retorno que modele el fallo (un resultado con
+  éxito o error) lo hace imposible de ignorar.
+</Challenge>
+
+## Para ir más profundo
+
+**Liskov no hablaba de herencia.** La formulación viene de una conferencia de Barbara Liskov en 1987 y se precisó en *A Behavioral Notion of Subtyping* (Liskov y Jeannette Wing, 1994). La palabra clave es *behavioral*: el criterio no es la jerarquía de clases sino qué propiedades demostrables sobre el supertipo siguen siendo ciertas con el subtipo. Por eso en TypeScript, con tipado estructural y sin un `extends` a la vista, se viola exactamente igual — el ejemplo de arriba es un objeto literal.
+
+**Las tres reglas, y la cuarta que casi nadie cita.** Un subtipo no puede fortalecer las precondiciones (pedir más para funcionar), no puede debilitar las postcondiciones (prometer menos al terminar) y debe preservar los invariantes del supertipo. Liskov y Wing añaden la *history constraint*: el subtipo tampoco puede permitir cambios de estado que el supertipo prohibía. Ese es el motivo real de que `MutableList` como subtipo de `List` sea un problema clásico, y no la firma de ningún método.
+
+**TypeScript te deja romperlo a propósito, y lo sabe.** `strictFunctionTypes` comprueba la contravarianza de parámetros, que es la mitad de LSP a nivel de tipos... salvo en los métodos declarados con sintaxis de método. Esto compila en modo estricto:
+
+```ts title="src/variance.ts"
+type A = { handle(x: string | number): void }; // método: bivariante
+type B = { handle: (x: string | number) => void }; // propiedad: contravariante
+
+const a: A = { handle(x: string) {} }; // ✅ compila
+const b: B = { handle: (x: string) => {} }; // ❌ error
+```
+
+La excepción es deliberada: sin ella, buena parte de las librerías del ecosistema (empezando por el DOM y por `Array`) dejarían de tipar. Si quieres que el compilador vigile la varianza de un contrato tuyo, **declara los miembros como propiedades de tipo función**, no con sintaxis de método. Es un cambio de dos caracteres que convierte una clase entera de violaciones de LSP en errores de compilación.
+
+**Y el test que "verifica que lanza" es un olor, no una red.** Si un test de una implementación afirma un comportamiento que ninguna otra implementación del mismo tipo comparte, ese tipo tiene dos habitantes distintos disfrazados de uno. La contramedida barata es un *contract test*: una sola batería de aserciones que se ejecuta contra **todas** las implementaciones del tipo. La que no pase, no es del tipo.
+
+## Para llevarte
+
+- **LSP es sobre comportamiento, no sobre `extends`:** con tipado estructural lo rompe un objeto literal igual de bien que una jerarquía de clases.
+- **Pedir más o prometer menos que el original rompe al que llama**, aunque las firmas encajen y el compilador calle.
+- **Un método que lanza `NotSupported` es un error de modelado:** el arreglo casi siempre está en partir el tipo, no en parchear la implementación.
+
+Busca en tu código un `throw new NotImplemented` o un método vacío dentro de algo que implementa una interfaz: ahí tienes tu suplente. Y ese arreglo —partir el contrato en dos— es justo el tema del siguiente post.

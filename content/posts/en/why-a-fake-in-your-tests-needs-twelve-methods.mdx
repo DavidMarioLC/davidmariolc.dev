@@ -1,0 +1,171 @@
+---
+title: Why does a fake in your tests need twelve methods to use one?
+description: 'The fourth SOLID principle looks at the caller rather than the module you write: nobody should carry methods they never call.'
+date: 2026-08-23
+draft: true
+series: solid
+seriesOrder: 4
+tags:
+  - solid
+  - typescript
+  - architecture
+---
+
+Northbound Coffee's daily sales report calls **one** method on the repository. Its test starts like this:
+
+```ts title="src/reports/daily-sales.test.ts"
+const repo: OrderRepository = {
+  findByDate: () => orders,
+  findById: () => { throw new Error("unused"); },
+  save: () => { throw new Error("unused"); },
+  delete: () => { throw new Error("unused"); },
+  // ...eight more, all the same
+};
+```
+
+The report only uses `findByDate`. Why does the test have to write eleven other methods?
+
+## The surprise: the test isn't wrong, it's warning you
+
+The temptation is to blame the test and extract a helper that fills in the rest. But the test is the **first honest consumer** of your interface: the only one forced to materialize everything the type demands. If writing it hurts, the coupling was already there — the test just made it visible.
+
+The real bill arrives the day somebody adds a method to `OrderRepository`:
+
+<CommandCompare
+  caption="Adding `findByCustomer` to the repository. No report calls it."
+  variants={[
+    {
+      label: "one fat interface",
+      command: "pnpm typecheck",
+      output: "src/reports/daily-sales.test.ts(4,7): error TS2739\nsrc/reports/top-products.test.ts(9,7): error TS2739\n✖ 14 errors in 14 files",
+      exitCode: 2,
+    },
+    {
+      label: "role interfaces",
+      command: "pnpm typecheck",
+      output: "✔ no errors",
+      exitCode: 0,
+    },
+  ]}
+/>
+
+Fourteen files red over a method none of them uses. That isn't the compiler being strict: it's a dependency you never asked for.
+
+## The intuition: the shop's keyring
+
+Northbound Coffee has eight doors: storeroom, office, walk-in fridge, safe, street door. When the milk supplier comes in, the convenient move is handing them **a copy of the whole keyring** — works everywhere, no thinking required.
+
+And it does work, right up until you rekey the safe. Now you have to call the milk supplier in to swap out a key they never used. Multiply that by the fourteen suppliers holding a full copy.
+
+The sane approach is the opposite: **everyone carries the key they actually use**. Milk gets the storeroom. The accountant gets the office. Rekeying the safe stops being fourteen people's problem.
+
+That's the Interface Segregation Principle (ISP): no client should depend on methods it doesn't use. And notice whose call it is — **the key is asked for by whoever walks in, not handed out by whoever built the building**. The interface is defined by the consumer, not the implementer.
+
+## The example, step by step
+
+The full keyring is this, and it's what nearly everyone writes first:
+
+```ts title="src/orders/repository.ts"
+export type OrderRepository = {
+  findById(id: string): Promise<Order | null>;
+  findByDate(day: string): Promise<Order[]>;
+  findAll(): Promise<Order[]>;
+  save(order: Order): Promise<void>;
+  delete(id: string): Promise<void>;
+  // ...seven more
+};
+```
+
+One type per implementation: there's a class that talks to Postgres, so there's an interface with everything that class can do. The name gives it away — it's named after the implementation, not after any use.
+
+The first step, and it already pays, is letting each consumer declare its key:
+
+```ts title="src/reports/daily-sales.ts"
+export type DailySalesSource = {
+  findByDate(day: string): Promise<Order[]>;
+};
+
+export function dailySales(source: DailySalesSource, day: string) {
+  return source.findByDate(day).then(summarize);
+}
+```
+
+The type lives **next to the report**, not next to the repository. Now the test's fake is this, entirely:
+
+```ts title="src/reports/daily-sales.test.ts"
+const source: DailySalesSource = { findByDate: async () => orders }; // [!code ++]
+```
+
+And here's the part that surprises people: **the Postgres class doesn't change a single line**. TypeScript is structural, so nothing needs to declare `implements DailySalesSource` anywhere — if it has a `findByDate` with that signature, it fits.
+
+```ts title="src/orders/postgres-repository.ts"
+export class PostgresOrderRepository {
+  async findByDate(day: string): Promise<Order[]> { /* ... */ }
+  // ...the other eleven, untouched
+}
+```
+
+```ts title="src/app.ts"
+const repo = new PostgresOrderRepository();
+dailySales(repo, "2026-08-23"); // fits by shape, nothing declared
+```
+
+<Callout type="tip" title="The shortcut when the fat interface already exists">
+  You don't have to migrate all at once. `type DailySalesSource = Pick<OrderRepository, "findByDate">`
+  gets you 80% of the benefit in one line. The hand-written type is better in the
+  medium term — it survives the repository changing — but `Pick` is what you can
+  ship this afternoon without touching fourteen files.
+</Callout>
+
+## Your turn
+
+A teammate proposes splitting the keyring in two, reads and writes:
+
+```ts title="src/orders/repository.ts"
+export type OrderReader = {
+  findById(id: string): Promise<Order | null>;
+  findByDate(day: string): Promise<Order[]>;
+  findAll(): Promise<Order[]>;
+};
+
+export type OrderWriter = {
+  save(order: Order): Promise<void>;
+  delete(id: string): Promise<void>;
+};
+```
+
+Twelve methods become three and two. Does that satisfy ISP?
+
+<Challenge summary="See the test">
+  A big improvement, and the same mistake in smaller form.
+
+  The daily sales report now depends on `findById` and `findAll`, which it also
+  never calls. Adding `findByCustomer` to `OrderReader` turns everyone who only
+  reads by date red again. You went from one eight-key ring to two four-key rings.
+
+  The clue is in the name. `OrderReader` describes **what** the implementation
+  is; `DailySalesSource` describes **what somebody uses it for**. An interface
+  you can name without mentioning a single consumer was almost always split
+  where it was convenient, not where it's used.
+
+  The test isn't how many methods it has — it's how many different reasons people
+  have to depend on it.
+</Challenge>
+
+## Going deeper
+
+**It was born from a compile-time problem.** Robert C. Martin formulated ISP in 1996 while working on Xerox printer software: one enormous `Job` class meant touching anything triggered hour-long recompiles and redeploys. In TypeScript that mechanical cost barely exists. What survives untouched is the other cost: every extra method on a type is one more decision to understand, one more fake to write, and one more way for someone far away to break your build.
+
+**It has better names outside SOLID.** Martin Fowler distinguishes a *header interface* (one that mirrors every public method of a class, like `OrderRepository`) from a *role interface* (one that describes a part in a collaboration, like `DailySalesSource`). ISP is, almost word for word, "prefer role interfaces". In Go the same idea is a Rob Pike proverb — *the bigger the interface, the weaker the abstraction* — plus a community convention: the interface is declared in the package that **consumes** it, not the one that implements it. Coming from Java or C#, that's the mental switch with the highest return.
+
+**Structural typing changes the maths.** In a nominal language, one interface per role forces the implementation to list five `implements` clauses and makes classes know their clients. In TypeScript nobody declares anything: role types are free for the implementer and only the consumer pays to write them. It's one of the rare cases where the version the principle calls correct is also the one with less ceremony.
+
+**And yes, you can overdo it.** One interface per *call site* leaves you with fifteen names for the same concept and no way to tell which ones overlap. The unit of ISP is the **role**, not the method: if two consumers use the type for the same reason, they share an interface even if one calls two methods and the other three. When in doubt, see whether you can name it after what the consumer does. If the name comes out forced, there was no new role.
+
+## Takeaways
+
+- **The consumer defines the interface:** if its name describes the implementation rather than a use, you split it where it was convenient.
+- **A painful fake in a test is a diagnosis**, not a testing annoyance: it's your interface charging you for methods nobody calls.
+- **The unit is the role, not the method:** splitting until you have one interface per call trades one problem for another.
+
+Open the longest fake in your suite and count how many of its methods throw or return empty. That number is the size of the keyring you're handing out. Last in the series: why your tests need a database to check a business rule.

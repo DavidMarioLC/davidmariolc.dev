@@ -1,0 +1,182 @@
+---
+title: ¿Por qué tus tests necesitan una base de datos para comprobar una regla?
+description: 'El quinto principio de SOLID no va de inyectar dependencias. Va de algo anterior: quién escribe el contrato y hacia dónde apunta la flecha.'
+date: 2026-08-24
+draft: true
+series: solid
+seriesOrder: 5
+tags:
+  - solid
+  - typescript
+  - arquitectura
+---
+
+Tostaduría Norte premia a los clientes fieles: a partir de diez pedidos, 10% de descuento. La regla entera cabe en una línea, pero el archivo empieza así:
+
+```ts title="src/pricing/loyalty.ts"
+import { db } from "../infra/postgres";
+
+export async function loyaltyDiscount(customerId: string) {
+  const rows = await db.query("select count(*) from orders where customer = $1", [customerId]);
+  return rows[0].count >= 10 ? 0.1 : 0;
+}
+```
+
+Para comprobar que diez pedidos dan un 10%, el test necesita Docker, una migración y un `beforeEach` que limpia tablas. ¿Por qué?
+
+## La sorpresa: la flecha apunta al revés
+
+Mira qué depende de qué. `loyaltyDiscount` es lo más valioso y lo más estable que tienes: es una decisión de negocio que sobrevivirá a tres refactors y a dos bases de datos. `db` es lo más volátil: un driver, un esquema, una cadena de conexión, un proveedor que mañana cambias.
+
+Y sin embargo la flecha va de lo estable a lo volátil. Cambiar de Postgres a otra cosa te obliga a abrir un archivo que contiene una regla de negocio. Ese archivo no debería enterarse nunca.
+
+El test lento es solo el síntoma que notas antes. Lo que te está diciendo es que **la política de la tienda quedó por debajo de la fontanería**.
+
+## La intuición: quién escribe el contrato
+
+Tostaduría Norte quiere empezar a repartir a domicilio. Hay dos formas de organizarlo.
+
+La primera: se acerca a la mensajería del barrio y se adapta. Recogen a las 17:20, así que la tienda cierra pedidos a las 17:00. Usan cajas de un tamaño concreto, así que la tienda compra esas cajas. Funciona — hasta que la mensajería cambia de horario y hay que reorganizar la tienda entera.
+
+La segunda: la tienda escribe una hoja. *"Recogida a las 18:00, cajas de hasta 40 cm, entrega en 24 horas, prueba de entrega con firma."* Quien quiera el trabajo, firma. Ahora la mensajería se adapta a la tienda, y cambiar de proveedor es cambiar de firmante, no reorganizar nada.
+
+En los dos casos el que reparte es la mensajería. Lo que cambia es **quién escribió el contrato**. Eso es el Principio de Inversión de Dependencias (DIP): los módulos de alto nivel no deben depender de los de bajo nivel; ambos dependen de abstracciones — y esas abstracciones las escribe el de arriba.
+
+Abajo, la misma política firmada por dos proveedores distintos. La política no se entera.
+
+<VanillaPlayground
+  title="Dos firmantes, el mismo contrato"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, SFMono-Regular, monospace; padding: 12px; line-height: 1.7 }`}
+  js={`// La política: no sabe de dónde salen los datos.
+async function loyaltyDiscount(history, customerId) {
+  const count = await history.countFor(customerId);
+  return count >= 10 ? 0.1 : 0;
+}
+
+// Dos firmantes del mismo contrato.
+const inMemory = { countFor: async () => 12 };
+const slowApi = {
+  countFor: () => new Promise((r) => setTimeout(() => r(3), 600)),
+};
+
+(async () => {
+  const lines = [
+    "en memoria (12 pedidos): " + (await loyaltyDiscount(inMemory, "c-1")),
+    "api lenta  (3 pedidos):  " + (await loyaltyDiscount(slowApi, "c-2")),
+  ];
+  document.getElementById("out").textContent = lines.join("\\n");
+})();`}
+/>
+
+## El ejemplo, paso a paso
+
+En el post anterior ya hiciste media inversión sin llamarla así: el reporte declaraba su propio `DailySalesSource`. Aquí se completa, y el detalle está en **dónde vive el archivo**.
+
+Este es el intento intermedio, el que casi todo el mundo da por bueno:
+
+```ts title="src/infra/order-history.ts"
+export type OrderHistory = {
+  countFor(customerId: string): Promise<number>;
+};
+```
+
+```ts title="src/pricing/loyalty.ts"
+import type { OrderHistory } from "../infra/order-history";
+```
+
+Hay una interfaz, hay inyección, el test ya no necesita Docker. Y la flecha **sigue apuntando abajo**: `pricing` importa de `infra`. Si mañana borras la carpeta `infra`, la regla de negocio no compila. No has invertido nada, has puesto una interfaz en medio.
+
+La versión correcta mueve un archivo de sitio, y eso es todo el principio:
+
+```ts title="src/pricing/loyalty.ts"
+export type OrderHistory = {
+  countFor(customerId: string): Promise<number>;
+};
+
+export const loyaltyDiscount = async (
+  history: OrderHistory,
+  customerId: string
+) => ((await history.countFor(customerId)) >= 10 ? 0.1 : 0);
+```
+
+```ts title="src/infra/postgres-order-history.ts"
+import type { OrderHistory } from "../pricing/loyalty"; // [!code ++]
+
+export const postgresOrderHistory: OrderHistory = {
+  async countFor(customerId) {
+    const rows = await db.query("select count(*) ...", [customerId]);
+    return Number(rows[0].count);
+  },
+};
+```
+
+El `import` cambió de dirección: ahora la fontanería conoce a la política y no al revés. Y el ensamblaje se hace en un solo sitio, lo más tarde posible:
+
+```ts title="src/main.ts"
+const discount = await loyaltyDiscount(postgresOrderHistory, customerId);
+```
+
+El test que antes pedía Docker es ahora una línea, y sigue probando la regla real:
+
+```ts title="src/pricing/loyalty.test.ts"
+expect(await loyaltyDiscount({ countFor: async () => 10 }, "c-1")).toBe(0.1);
+```
+
+<Callout type="warning" title="La abstracción tampoco puede oler a detalle">
+  Si `OrderHistory` devolviera un `QueryResult`, una `Row` o un tipo generado por
+  el ORM, la flecha seguiría invertida y el acoplamiento intacto. La mitad
+  olvidada del principio es esta: *las abstracciones no deben depender de los
+  detalles*. El contrato se escribe en el vocabulario de la tienda, no en el del
+  proveedor.
+</Callout>
+
+## Ahora tú
+
+Otro compañero mete un contenedor de inyección de dependencias y registra todo al arrancar:
+
+```ts title="src/container.ts"
+container.register("orderHistory", () => new PostgresOrderHistory());
+
+// y en la regla:
+export async function loyaltyDiscount(customerId: string) {
+  const history = container.resolve<OrderHistory>("orderHistory");
+  return (await history.countFor(customerId)) >= 10 ? 0.1 : 0;
+}
+```
+
+Ya no hay `import` de Postgres en el archivo de la regla y el test puede registrar un doble. ¿Esto es DIP?
+
+<Challenge summary="Ver la prueba de una línea">
+  No necesariamente, y hay una comprobación que no admite discusión: **borra la
+  carpeta `infra` y mira si `pricing` compila**.
+
+  Si `OrderHistory` sigue declarado en `infra`, no compila: la flecha nunca se
+  invirtió. Cambió la forma de obtener la dependencia, no quién depende de quién.
+
+  Y el contenedor añade su propio problema: la regla ahora depende de un `resolve`
+  con una cadena de texto, que ningún compilador comprueba. Cambia
+  `"orderHistory"` por un typo y te enteras en runtime. Un parámetro normal
+  —como el de la sección anterior— te da la misma sustitución con verificación de
+  tipos y sin framework.
+</Challenge>
+
+## Para ir más profundo
+
+**DIP, DI y contenedor de DI son tres cosas distintas.** Es la confusión más cara de esta lista. *DIP* es una regla sobre la **dirección** de las dependencias en el código fuente. *Inyección de dependencias* es una técnica para pasarle a un módulo sus colaboradores en vez de que los construya. Un *contenedor* es una herramienta para automatizar ese cableado. Puedes cumplir DIP con un parámetro de función y cero librerías, y puedes usar el contenedor más sofisticado del ecosistema violando DIP en cada archivo.
+
+**"Inversión" se refiere al código fuente, no al control.** En ejecución el flujo sigue yendo de la política a la base de datos: `loyaltyDiscount` llama a Postgres, como siempre. Lo que se invierte es la **dependencia en tiempo de compilación**, que ahora va en sentido contrario al flujo de control. Ese es literalmente el significado de la palabra, y es lo que permite compilar, testear y razonar sobre el dominio sin que exista la infraestructura.
+
+**Es hexagonal antes de que se llamara hexagonal.** *Ports and adapters*, de Alistair Cockburn (2005), es DIP aplicado a la escala de la aplicación: el *puerto* es la interfaz y pertenece al interior; el *adaptador* la implementa desde fuera. La Clean Architecture de Martin es la misma idea con círculos concéntricos y una sola regla: **las dependencias apuntan hacia dentro**. Si conoces DIP, ya conoces las dos; lo que añaden es el nombre de las carpetas.
+
+**Y no todo merece un puerto.** Invertir una dependencia cuesta un archivo, un nombre y una indirección. La factura vale la pena cuando lo de abajo es **volátil** (un proveedor, una API externa, la persistencia) o cuando necesitas **sustituirlo en tests**. Contra `JSON.parse`, `Math.random` o una función pura de tu propio repositorio, la interfaz es ceremonia. El día que necesites controlar el reloj o el azar, inviértelos — hasta entonces, no.
+
+**Lo puedes verificar en CI, no confiar en la disciplina.** La regla "`pricing` no importa de `infra`" es una regla de lint, no una convención de equipo. Con `eslint-plugin-boundaries`, `dependency-cruiser` o una regla de `import/no-restricted-paths`, la flecha invertida deja de depender de que nadie tenga prisa un viernes.
+
+## Para llevarte
+
+- **DIP es una dirección, no un framework:** si borrar `infra` rompe tu dominio, tienes una interfaz en medio pero la flecha sigue apuntando abajo.
+- **La abstracción la escribe y la posee el de arriba**, y habla su vocabulario: en cuanto el contrato menciona una `Row` o un tipo del ORM, el acoplamiento vuelve.
+- **Invierte lo volátil y lo que necesites sustituir en tests**, no todo: un puerto para algo estable es un archivo que nadie va a agradecer.
+
+Elige un archivo de reglas de negocio de tu proyecto y mira sus imports. Si alguno apunta a una carpeta de infraestructura, ahí tienes la primera flecha que dar la vuelta — y con esto cerramos la serie: los cinco principios eran, todo el tiempo, cinco preguntas sobre quién depende de quién.

@@ -1,0 +1,172 @@
+---
+title: ¿Por qué un fake de tus tests necesita doce métodos para usar uno?
+description: 'El cuarto principio de SOLID no mira al módulo que escribes, sino al que lo usa: nadie debería cargar con métodos que no llama.'
+date: 2026-08-23
+draft: true
+series: solid
+seriesOrder: 4
+tags:
+  - solid
+  - typescript
+  - arquitectura
+---
+
+El reporte de ventas del día de Tostaduría Norte llama a **un** método del repositorio. Su test empieza así:
+
+```ts title="src/reports/daily-sales.test.ts"
+const repo: OrderRepository = {
+  findByDate: () => orders,
+  findById: () => { throw new Error("no usado"); },
+  save: () => { throw new Error("no usado"); },
+  delete: () => { throw new Error("no usado"); },
+  // ...ocho más, todos igual
+};
+```
+
+El reporte solo usa `findByDate`. ¿Por qué el test tiene que escribir once métodos más?
+
+## La sorpresa: el test no está mal, te está avisando
+
+La tentación es echarle la culpa al test y sacar un helper que rellene el resto. Pero el test es el **primer consumidor honesto** de tu interfaz: el único obligado a materializar todo lo que el tipo pide. Si escribirlo duele, el acoplamiento ya estaba ahí — el test solo lo hizo visible.
+
+El precio real se cobra el día que alguien añade un método a `OrderRepository`:
+
+<CommandCompare
+  caption="Añadir `findByCustomer` al repositorio. Ningún reporte lo llama."
+  variants={[
+    {
+      label: "una interfaz gorda",
+      command: "pnpm typecheck",
+      output: "src/reports/daily-sales.test.ts(4,7): error TS2739\nsrc/reports/top-products.test.ts(9,7): error TS2739\n✖ 14 errores en 14 archivos",
+      exitCode: 2,
+    },
+    {
+      label: "interfaces por rol",
+      command: "pnpm typecheck",
+      output: "✔ sin errores",
+      exitCode: 0,
+    },
+  ]}
+/>
+
+Catorce archivos en rojo por un método que ninguno de ellos usa. Eso no es rigor del compilador: es una dependencia que nunca pediste.
+
+## La intuición: el llavero del local
+
+Tostaduría Norte tiene ocho puertas: almacén, oficina, cámara de frío, caja fuerte, la de la calle. Cuando entra el proveedor de leche, lo cómodo es darle **una copia del llavero entero** — así vale para todo y no hay que pensar.
+
+Y funciona, hasta que un día cambias la cerradura de la caja fuerte. Ahora tienes que llamar al proveedor de leche para cambiarle una llave que nunca usó. Multiplícalo por los catorce proveedores que tienen copia del llavero completo.
+
+Lo sensato es lo contrario: **cada quien entra con la llave que usa**. El de la leche, la del almacén. La gestoría, la de la oficina. Cambiar la cerradura de la caja fuerte deja de ser un problema de catorce personas.
+
+Eso es el Principio de Segregación de Interfaces (ISP): ningún cliente debería depender de métodos que no usa. Y fíjate de quién es la decisión — **la llave la pide el que entra, no la reparte el que construyó el edificio**. La interfaz la define el que consume, no el que implementa.
+
+## El ejemplo, paso a paso
+
+El llavero completo es este, y es lo que casi todo el mundo escribe primero:
+
+```ts title="src/orders/repository.ts"
+export type OrderRepository = {
+  findById(id: string): Promise<Order | null>;
+  findByDate(day: string): Promise<Order[]>;
+  findAll(): Promise<Order[]>;
+  save(order: Order): Promise<void>;
+  delete(id: string): Promise<void>;
+  // ...siete más
+};
+```
+
+Un tipo por implementación: hay una clase que habla con Postgres, así que hay una interfaz con todo lo que esa clase sabe hacer. El nombre lo delata — se llama como la implementación, no como ningún uso.
+
+El primer paso, y ya vale la pena, es que cada consumidor declare su llave:
+
+```ts title="src/reports/daily-sales.ts"
+export type DailySalesSource = {
+  findByDate(day: string): Promise<Order[]>;
+};
+
+export function dailySales(source: DailySalesSource, day: string) {
+  return source.findByDate(day).then(summarize);
+}
+```
+
+El tipo vive **junto al reporte**, no junto al repositorio. Ahora el fake del test es esto entero:
+
+```ts title="src/reports/daily-sales.test.ts"
+const source: DailySalesSource = { findByDate: async () => orders }; // [!code ++]
+```
+
+Y aquí está la parte que a mucha gente le sorprende: **la clase de Postgres no cambia ni una línea**. TypeScript es estructural, así que no hace falta declarar `implements DailySalesSource` en ningún sitio — si tiene un `findByDate` con esa firma, encaja.
+
+```ts title="src/orders/postgres-repository.ts"
+export class PostgresOrderRepository {
+  async findByDate(day: string): Promise<Order[]> { /* ... */ }
+  // ...los otros once, intactos
+}
+```
+
+```ts title="src/app.ts"
+const repo = new PostgresOrderRepository();
+dailySales(repo, "2026-08-23"); // encaja por forma, sin declarar nada
+```
+
+<Callout type="tip" title="El atajo cuando ya tienes la interfaz gorda">
+  Migrar de golpe no hace falta. `type DailySalesSource = Pick<OrderRepository, "findByDate">`
+  te da el 80% del beneficio en una línea. El tipo escrito a mano es mejor a
+  medio plazo —sobrevive a que el repositorio cambie— pero `Pick` es lo que
+  puedes hacer esta tarde sin tocar catorce archivos.
+</Callout>
+
+## Ahora tú
+
+Un compañero propone partir el llavero en dos, lectura y escritura:
+
+```ts title="src/orders/repository.ts"
+export type OrderReader = {
+  findById(id: string): Promise<Order | null>;
+  findByDate(day: string): Promise<Order[]>;
+  findAll(): Promise<Order[]>;
+};
+
+export type OrderWriter = {
+  save(order: Order): Promise<void>;
+  delete(id: string): Promise<void>;
+};
+```
+
+Doce métodos pasan a ser tres y dos. ¿Cumple ISP?
+
+<Challenge summary="Ver el criterio">
+  Mejora mucho y sigue siendo el mismo error, más pequeño.
+
+  El reporte de ventas del día depende ahora de `findById` y `findAll`, que
+  tampoco llama. Añadir `findByCustomer` a `OrderReader` vuelve a poner en rojo
+  a todos los que solo leen por fecha. Pasaste de un llavero de ocho llaves a
+  dos llaveros de cuatro.
+
+  La pista está en el nombre. `OrderReader` describe **qué es** la
+  implementación; `DailySalesSource` describe **para qué** la usa alguien. Una
+  interfaz que se pueda nombrar sin mencionar a ningún consumidor casi siempre
+  se partió por donde era cómodo, no por donde se usa.
+
+  El criterio no es cuántos métodos tiene, sino cuántos motivos distintos tiene
+  la gente para depender de ella.
+</Challenge>
+
+## Para ir más profundo
+
+**Nació de un problema de tiempos de compilación.** Robert C. Martin formuló ISP en 1996 trabajando en el software de las impresoras de Xerox: una clase `Job` gigantesca hacía que tocar cualquier cosa disparara recompilaciones y redespliegues de una hora. En TypeScript ese coste mecánico casi no existe. Lo que sobrevive intacto es el otro coste: cada método de más en un tipo es una decisión de más que entender, un fake más que escribir y un motivo más para que te rompan la compilación desde lejos.
+
+**Tiene nombres mejores fuera de SOLID.** Martin Fowler distingue *header interface* (la que copia todos los métodos públicos de una clase, como `OrderRepository`) de *role interface* (la que describe un papel en una colaboración, como `DailySalesSource`). ISP es, casi palabra por palabra, "prefiere role interfaces". En Go la misma idea es un proverbio de Rob Pike — *the bigger the interface, the weaker the abstraction*— y una convención de comunidad: la interfaz se declara en el paquete que la **consume**, no en el que la implementa. Si vienes de Java o C#, ese es el cambio mental que más rinde.
+
+**El tipado estructural cambia el cálculo.** En un lenguaje nominal, una interfaz por rol obliga a la implementación a listar cinco `implements` y a las clases a conocer a sus clientes. En TypeScript nadie declara nada: los tipos por rol son gratis para el implementador y solo el consumidor paga por escribirlos. Es una de las pocas veces en que la versión "correcta" según el principio también es la que menos ceremonia tiene.
+
+**Y sí, se puede pasar de rosca.** Una interfaz por *call site* te deja con quince nombres para el mismo concepto y ninguna forma de saber cuáles se solapan. La unidad de ISP es el **rol**, no el método: si dos consumidores usan el tipo por el mismo motivo, comparten interfaz aunque uno llame a dos métodos y el otro a tres. Cuando dudes, mira si puedes nombrarla por lo que hace el consumidor. Si el nombre te sale forzado, es que no había un rol nuevo.
+
+## Para llevarte
+
+- **La interfaz la define el consumidor:** si su nombre describe la implementación y no un uso, la partiste por donde era cómodo.
+- **Un fake doloroso en un test es un diagnóstico**, no una molestia del testing: es tu interfaz cobrándote métodos que nadie llama.
+- **La unidad es el rol, no el método:** partir hasta tener una interfaz por llamada cambia un problema por otro.
+
+Abre el fake más largo de tu suite y cuenta cuántos de sus métodos lanzan o devuelven vacío. Ese número es el tamaño del llavero que estás repartiendo. En el último post de la serie: por qué tus tests necesitan una base de datos para probar una regla de negocio.

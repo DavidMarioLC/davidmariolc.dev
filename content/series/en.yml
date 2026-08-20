@@ -1,3 +1,6 @@
 - slug: content-pipeline
   title: Building a content pipeline
   description: Notes from wiring Velite, MDX and Next.js together for this site.
+- slug: solid
+  title: SOLID, one principle at a time
+  description: The five principles explained from the problem each one solves, in TypeScript and without the lecture.

@@ -1,0 +1,174 @@
+---
+title: Why does every new payment method force you into the same file?
+description: 'The second SOLID principle is not about predicting the future. It asks for something far humbler: leave a socket where you already saw the change arrive.'
+date: 2026-08-21
+draft: true
+series: solid
+seriesOrder: 2
+tags:
+  - solid
+  - typescript
+  - architecture
+---
+
+Northbound Coffee takes payment three ways, and checkout handles it like this:
+
+```ts title="src/checkout.ts"
+function charge(method: string, cents: number) {
+  if (method === "card") return chargeCard(cents);
+  if (method === "cash") return openDrawer(cents);
+  if (method === "transfer") return createTransfer(cents);
+  throw new Error(`Unknown method: ${method}`);
+}
+```
+
+Marketing wants to accept QR payments. You add a fourth `if`, five minutes, tests green. Where's the problem?
+
+## The surprise: the fourth `if` wasn't one
+
+The problem isn't the `if`. It's that the same chain of conditions lives in seven other files: the one that refunds, the one that prints the receipt, the one that decides whether there's a fee, the one that exports to accounting. Adding a payment method doesn't cost five minutes: it costs an afternoon and one thing you forget.
+
+And the one you forget stays quiet. `method` is a `string`, so the compiler has nothing to check: the forgotten file lands on the `throw` in production, with a customer standing at the counter.
+
+## The intuition: the wall and the socket
+
+When you want a new lamp in the living room you don't tear open the wall to run cable to the breaker box. You plug it in. The wall is **closed** — nobody opens it again — and at the same time **open**: it accepts appliances that didn't exist when it was built.
+
+That's the whole Open/Closed Principle (OCP): a module should be open to extension and closed to modification. Adding behaviour should mean adding code, not editing it.
+
+And here's the part almost nobody mentions: **you don't fill the house with sockets just in case**. An electrician puts them where people already plug things in — next to the sofa, not in the middle of the ceiling. A spare socket is a hole in the wall nobody uses.
+
+Below, checkout turned into a power strip. Add a new method at the end of the registry and notice that `charge` never changes.
+
+<VanillaPlayground
+  title="Adding an appliance without opening the wall"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, SFMono-Regular, monospace; padding: 12px; line-height: 1.7 }`}
+  js={`// The wall: closed. You never touch it again.
+const methods = {};
+function register(name, handler) { methods[name] = handler; }
+function charge(name, cents) {
+  const handler = methods[name];
+  if (!handler) throw new Error("No socket for: " + name);
+  return handler(cents);
+}
+
+// The appliances: each one plugs itself in.
+register("card", (c) => "Charged " + c + " to card");
+register("cash", (c) => "Drawer opened for " + c);
+// Add yours here:
+// register("qr", (c) => "QR for " + c);
+
+const out = ["card", "cash", "qr"].map((m) => {
+  try { return charge(m, 4950); } catch (e) { return e.message; }
+});
+document.getElementById("out").textContent = out.join("\\n");`}
+/>
+
+## The example, step by step
+
+In real code the socket is a type. First, the shape every appliance has to fit:
+
+```ts title="src/payments/method.ts"
+export type PaymentMethod = {
+  id: string;
+  charge(cents: number): Promise<Receipt>;
+  refund(receipt: Receipt): Promise<void>;
+};
+```
+
+Notice `refund` travels next to `charge`. That's the point: the seven scattered switches existed because each operation asked "which method is this?" on its own. Now the question gets asked once.
+
+Each payment method is a file that knows nothing about checkout:
+
+```ts title="src/payments/card.ts"
+export const card: PaymentMethod = {
+  id: "card",
+  charge: (cents) => gateway.authorize(cents),
+  refund: (receipt) => gateway.void(receipt.authId),
+};
+```
+
+The registry is the power strip, and it's the only place that lists what exists:
+
+```ts title="src/payments/registry.ts"
+import { card } from "./card";
+import { cash } from "./cash";
+
+const registry = new Map([card, cash].map((m) => [m.id, m]));
+
+export function methodFor(id: string) {
+  const method = registry.get(id);
+  if (!method) throw new Error(`No socket for: ${id}`);
+  return method;
+}
+```
+
+And checkout stops deciding:
+
+```ts title="src/checkout.ts"
+if (method === "card") return chargeCard(cents);   // [!code --]
+if (method === "cash") return openDrawer(cents);   // [!code --]
+return methodFor(method).charge(cents);            // [!code ++]
+```
+
+Accepting QR is now `src/payments/qr.ts` plus one line in the registry. The other six files never hear about it, which is exactly what you wanted.
+
+<Callout type="warning" title="Don't fit the socket before you know where">
+  With a single payment method this design is a one-entry `Map` and three files
+  of ceremony. OCP pays off once you've seen the axis of change, not when you
+  imagine it: wait for the second real case and you'll know which wall it goes in.
+</Callout>
+
+## Your turn
+
+Another teammate suggests keeping the `switch`, but typed:
+
+```ts title="src/checkout.ts"
+type MethodId = "card" | "cash" | "transfer";
+
+function charge(method: MethodId, cents: number) {
+  switch (method) {
+    case "card": return chargeCard(cents);
+    case "cash": return openDrawer(cents);
+    case "transfer": return createTransfer(cents);
+  }
+}
+```
+
+With the union type, forgetting a case when you add `"qr"` is a compile error, not a production `throw`. Does that violate OCP or solve it?
+
+<Challenge summary="See the test">
+  It violates the letter, and sometimes wins anyway.
+
+  You're still **modifying** in order to extend, so OCP says no. But the damage
+  OCP exists to prevent — finding out in production — is already covered by the
+  compiler: add `"qr"` to the union and all seven files go red before the commit.
+
+  The real test is which axis moves more. If you add payment methods often and
+  the operations are stable, the registry wins: one new file per method. If the
+  methods are three and fixed but a new operation shows up every month (print,
+  export, audit), the exhaustive `switch` wins: you add one function and the
+  compiler walks you through all three cases.
+
+  Picking one makes the other more expensive. That trade-off has a name, and
+  it's the next section.
+</Challenge>
+
+## Going deeper
+
+**It's called the expression problem.** Philip Wadler named it in 1998: given a set of data types and a set of operations, no design lets you add both without touching existing code. Polymorphism makes new data cheap and new operations expensive; the exhaustive `switch` does the opposite. OCP isn't free: it **picks an axis and charges you on the other one**. When somebody says "this doesn't follow OCP", the useful question is "open to what?".
+
+**"Closed" used to mean "already compiled".** Bertrand Meyer coined OCP in *Object-Oriented Software Construction* (1988), in a world where modifying a published module forced every client to recompile and redistribute; his answer was inheritance. What we use today is Robert C. Martin's 1996 restatement — *polymorphic OCP* — where the socket is an interface, not a base class. That's why "inherit to extend" sounds stale: it's literally the thirty-eight-year-old version.
+
+**The practical rule is to wait.** Martin himself puts it plainly: you can't close a module against every possible change, only against the ones you've already seen. The tactic is *fool me once* — the first time the change arrives, you hack it in; **the second** time, that's when you fit the socket, because now you know the wall. Abstracting on the first case is guessing, and a wrong guess (an abstraction that doesn't fit) costs more than one extra `if`.
+
+**The registry has a cost the `switch` doesn't.** A `Map` filled by import depends on somebody importing the file: with aggressive tree shaking or route-level lazy loading, a payment method can go unregistered and fail only at runtime. If you go this way, import the registry explicitly from a single bootstrap module and never rely on import side effects.
+
+## Takeaways
+
+- **Open to extension, closed to modification** means adding behaviour is adding a file, not editing seven.
+- **No design is open to everything:** decide whether yours grows in data or in operations, and accept that the other axis will hurt.
+- **The socket goes in at the second change, not the first:** before that you're guessing where it'll be needed.
+
+Find a `switch` or `if` chain in your project that keys off the same field, and count how many files repeat that list. More than two, and you've found the wall. Next post: why a subclass can pass every test and still break production.

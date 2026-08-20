@@ -1,0 +1,198 @@
+---
+title: ¿Por qué cada cambio en tu app rompe algo que no tocaste?
+description: 'El primer principio de SOLID no habla de hacer una sola cosa, sino de algo más útil y más raro: tener un solo dueño.'
+date: 2026-08-20
+draft: true
+series: solid
+seriesOrder: 1
+tags:
+  - solid
+  - typescript
+  - arquitectura
+---
+
+Tostaduría Norte es una tienda de café ficticia. Su clase `Order` lleva dos años creciendo y hoy se ve así:
+
+```ts title="src/order.ts"
+class Order {
+  constructor(private readonly items: Item[]) {}
+
+  total() { /* suma los items */ }
+  toEmailBody() { /* el correo de confirmación */ }
+  toAccountingLine() { /* la línea del reporte contable */ }
+}
+```
+
+Finanzas pide algo trivial: en el reporte contable los importes van sin decimales. Cambias un `2` por un `0`. ¿Cuántos tests se caen?
+
+## La sorpresa: se rompe el correo
+
+Se caen dos: el del reporte contable (esperado) y el del correo de confirmación al cliente (nadie lo tocó). El motivo está tres métodos más abajo, en el helper privado que ambos usan para formatear dinero.
+
+Si tu reacción es "bueno, pues extraigo el formato a dos funciones y listo" — correcto, pero esa es la solución, no el diagnóstico. Y sin diagnóstico el mismo bug vuelve el mes que viene por otra puerta. Lo que acaba de pasar tiene nombre: la clase `Order` tiene **dos dueños**.
+
+## La intuición: una libreta por departamento
+
+Imagina que Tostaduría Norte tiene una sola libreta física en la oficina. Finanzas apunta ahí sus cierres, Marketing sus plantillas de correo y Operaciones el stock. Todos escriben ordenado, con buena letra, cada uno en su sección.
+
+Un día Finanzas decide que los importes van redondeados y tacha la convención escrita en la primera página. Marketing, que se apoyaba en esa misma página, se queda con correos rotos sin haber tocado nada.
+
+El problema nunca fue la letra. Fue que **tres departamentos comparten una libreta**. La solución no es escribir con más cuidado: es que cada departamento tenga la suya.
+
+Eso es el Principio de Responsabilidad Única (SRP, *Single Responsibility Principle*): un módulo debe tener una sola razón para cambiar. Y "razón para cambiar" no significa "hace una sola cosa" — significa **una sola persona o departamento que puede pedirte que cambie ese archivo**.
+
+Toca el formateador de abajo: cambia el `2` de `toFixed(2)` por un `0` y mira qué se lleva por delante.
+
+<VanillaPlayground
+  title="Una libreta, dos departamentos"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, SFMono-Regular, monospace; padding: 12px; line-height: 1.7 }`}
+  js={`// La página compartida de la libreta.
+function money(cents) {
+  return "$" + (cents / 100).toFixed(2);
+}
+
+const total = 4950;
+
+// Marketing lee esta página...
+const email = "Gracias por tu compra. Total: " + money(total);
+// ...y Finanzas también.
+const ledger = "2026-08-20;VENTA;" + money(total);
+
+document.getElementById("out").textContent = email + "\\n" + ledger;`}
+/>
+
+## El ejemplo, paso a paso
+
+Volvamos al código real. La versión ingenua concentra todo en la clase:
+
+```ts title="src/order.ts" showLineNumbers
+type Item = { name: string; unitPrice: number; qty: number };
+
+class Order {
+  constructor(private readonly items: Item[]) {}
+
+  total() {
+    return this.items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  }
+
+  private money(cents: number) {
+    return `$${(cents / 100).toFixed(2)}`;
+  }
+}
+```
+
+Hasta aquí nada huele mal: `money` es un detalle privado y `total` es lo que cualquiera espera de un pedido. El problema aparece cuando dos consumidores distintos se cuelgan de ese privado:
+
+```ts title="src/order.ts"
+  toEmailBody() {
+    return `Gracias por tu compra. Total: ${this.money(this.total())}`;
+  }
+
+  toAccountingLine() {
+    return `${todayIso()};VENTA;${this.money(this.total())}`;
+  }
+```
+
+`toEmailBody` responde a Marketing. `toAccountingLine` responde a Finanzas. Son dos departamentos escribiendo en la misma página, y el compilador no tiene forma de avisarte: el código es válido, está tipado y pasa el lint.
+
+Ahora sí, el cambio que pidió Finanzas — y lo que se lleva con él:
+
+```ts title="src/order.ts"
+  private money(cents: number) {
+    return `$${(cents / 100).toFixed(2)}`; // [!code --]
+    return `$${(cents / 100).toFixed(0)}`; // [!code ++]
+  }
+```
+
+La corrección no es duplicar el formateador dentro de la clase. Es sacar cada uso a su propia libreta, y dejar en `Order` solo lo que nadie de fuera le discute — cuánto vale el pedido:
+
+```ts title="src/order.ts"
+export class Order {
+  constructor(private readonly items: Item[]) {}
+
+  total() {
+    return this.items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  }
+}
+```
+
+```ts title="src/marketing/confirmation-email.ts"
+// La libreta de Marketing: cambia cuando cambia el copy.
+export function renderConfirmationEmail(order: Order) {
+  const amount = `$${(order.total() / 100).toFixed(2)}`;
+  return `Gracias por tu compra. Total: ${amount}`;
+}
+```
+
+```ts title="src/finance/accounting-export.ts"
+// La libreta de Finanzas: cambia cuando cambia la norma contable.
+export function toAccountingLine(order: Order, date: string) {
+  const amount = `$${(order.total() / 100).toFixed(0)}`;
+  return `${date};VENTA;${amount}`;
+}
+```
+
+Sí, el `toFixed` aparece dos veces. Eso no es duplicación: son dos reglas distintas que hoy coinciden en la sintaxis. Unificarlas es exactamente el error del que venimos.
+
+<Callout type="warning" title="DRY y SRP tiran en direcciones opuestas">
+  Extraer todo lo que se repite es el camino más corto a una libreta compartida.
+  Antes de unificar dos fragmentos idénticos, pregúntate si cambiarían por la
+  misma razón. Si no, el parecido es una coincidencia y no un duplicado.
+</Callout>
+
+## Ahora tú
+
+Un compañero ve el resultado y propone esto, "para no repetir el formateo":
+
+```ts title="src/shared/format-money.ts"
+export function formatMoney(cents: number, decimals = 2) {
+  return `$${(cents / 100).toFixed(decimals)}`;
+}
+```
+
+Las dos libretas lo importan y cada una pasa sus decimales. ¿Esto respeta SRP o es la misma libreta con otro nombre?
+
+<Challenge summary="Ver el criterio">
+  Depende de quién puede pedir que `formatMoney` cambie.
+
+  Mientras solo formatee un número con un separador, el único que la toca es
+  quien mantiene ese formateo, y es un módulo legítimo: parámetro fuera, regla
+  de negocio ninguna.
+
+  Se convierte en la libreta compartida en cuanto le entra un `if`: un
+  `formatMoney(cents, { locale, currency, roundingForLedger })` ya recibe
+  peticiones de Marketing, de Finanzas y del equipo de internacionalización.
+  La señal no es el número de importadores — es el número de departamentos que
+  pueden abrir un ticket contra ese archivo.
+</Challenge>
+
+## Para ir más profundo
+
+**La definición cambió, y casi nadie se enteró.** En *Agile Software Development* (2002), Robert C. Martin escribió "una clase debe tener una sola razón para cambiar", y durante quince años la industria lo leyó como "una clase debe hacer una sola cosa". En *Clean Architecture* (2017) lo reformuló para cerrar esa lectura: *"un módulo debe ser responsable ante uno y solo un actor"*. La segunda versión es accionable — te obliga a nombrar a una persona — y la primera no: "una sola cosa" admite cualquier granularidad que quieras defender.
+
+**El mal opuesto también tiene nombre.** Si aplicas SRP como "un archivo por función", acabas en *shotgun surgery* (término de Martin Fowler en *Refactoring*): un cambio de negocio te obliga a tocar catorce archivos porque la responsabilidad quedó pulverizada. SRP no dice "más archivos". Dice "las fronteras van donde están las fronteras de los actores": lo que cambia junto, junto; lo que cambia por razones distintas, separado.
+
+**Se detecta con `git`, no con la intuición.** El historial sabe quién le pide cambios a cada archivo:
+
+```bash
+git log --format='%an' -- src/order.ts | sort | uniq -c | sort -rn
+```
+
+Un archivo tocado por gente de tres equipos, en commits que no comparten motivo, es una libreta compartida aunque el nombre de la clase suene coherente. Es la señal más barata que tienes y no requiere leer una línea de código.
+
+**Y es un principio de organigrama, no de código.** Ley de Conway: la arquitectura acaba copiando la estructura de comunicación de la empresa. SRP es esa ley usada a propósito en lugar de sufrida — si Finanzas y Marketing son equipos separados, sus módulos también. El corolario incómodo es que **una misma clase puede violar SRP en una empresa y respetarlo en otra**, con el código idéntico, porque lo que cambió es quién puede pedir el cambio.
+
+<Callout type="tip" title="Si dividir incomoda al que consume">
+  Separar en tres archivos puede empeorar la vida de quien solo quería
+  `order.toEmailBody()`. Un facade — un módulo delgado que reexporta la
+  operación completa — devuelve la comodidad sin volver a juntar las libretas.
+</Callout>
+
+## Para llevarte
+
+- **La unidad de SRP es el actor, no la función.** Antes de dividir, nombra a la persona que puede pedirte ese cambio; si no puedes nombrarla, no tienes una responsabilidad, tienes una etiqueta.
+- **Dos fragmentos idénticos no son duplicación si cambian por razones distintas.** Unificarlos crea el acoplamiento que SRP intenta evitar.
+- **El síntoma llega antes que el diagnóstico:** el día que un cambio rompe un test que nadie tocó, ya sabes que hay dos dueños en el mismo archivo.
+
+Abre el archivo más grande de tu proyecto y corre el `git log` de arriba. Si salen tres nombres de tres equipos distintos, tienes tu primer candidato — y ya sabes por dónde parte. En el siguiente post de la serie vamos al segundo principio: por qué añadir el tercer `if` a un `switch` significa que el diseño se te está resistiendo.

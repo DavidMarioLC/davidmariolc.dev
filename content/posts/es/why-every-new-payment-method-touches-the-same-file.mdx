@@ -1,0 +1,174 @@
+---
+title: ¿Por qué cada nuevo método de pago te obliga a tocar el mismo archivo?
+description: 'El segundo principio de SOLID no pide adivinar el futuro. Pide algo mucho más modesto: dejar un enchufe donde ya viste que llega el cambio.'
+date: 2026-08-21
+draft: true
+series: solid
+seriesOrder: 2
+tags:
+  - solid
+  - typescript
+  - arquitectura
+---
+
+Tostaduría Norte cobra de tres maneras, y el checkout lo resuelve así:
+
+```ts title="src/checkout.ts"
+function charge(method: string, cents: number) {
+  if (method === "card") return chargeCard(cents);
+  if (method === "cash") return openDrawer(cents);
+  if (method === "transfer") return createTransfer(cents);
+  throw new Error(`Método desconocido: ${method}`);
+}
+```
+
+Marketing quiere aceptar pago con QR. Añades un cuarto `if`, cinco minutos, tests en verde. ¿Dónde está el problema?
+
+## La sorpresa: el cuarto `if` no era uno
+
+El problema no es el `if`. Es que ese mismo bloque de condiciones existe en siete archivos más: el que reembolsa, el que imprime el ticket, el que decide si hay comisión, el que exporta a contabilidad. Añadir un método de pago no cuesta cinco minutos: cuesta una tarde y un olvido.
+
+Y el que olvidas no te avisa. `method` es un `string`, así que el compilador no tiene nada que comprobar: el archivo olvidado cae en el `throw` en producción, con un cliente delante del mostrador.
+
+## La intuición: la pared y el enchufe
+
+Cuando quieres una lámpara nueva en el salón no rompes la pared para tirar cable hasta el cuadro eléctrico. La enchufas. La pared está **cerrada** —nadie la vuelve a abrir— y a la vez **abierta**: admite aparatos que no existían cuando se construyó.
+
+Eso es todo el Principio de Abierto/Cerrado (OCP, *Open/Closed Principle*): un módulo debe estar abierto a extensión y cerrado a modificación. Añadir comportamiento debería ser añadir código, no editarlo.
+
+Y ojo con la parte que casi nadie cuenta: **no llenas la casa de enchufes por si acaso**. El electricista los pone donde ya sabe que la gente conecta cosas — junto al sofá, no en mitad del techo. Un enchufe de más es un agujero en la pared que nadie usa.
+
+Abajo, el checkout convertido en regleta. Añade un método nuevo al final del registro y mira que no hay que tocar `charge`.
+
+<VanillaPlayground
+  title="Añadir un aparato sin abrir la pared"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, SFMono-Regular, monospace; padding: 12px; line-height: 1.7 }`}
+  js={`// La pared: cerrada. No la vuelves a tocar.
+const methods = {};
+function register(name, handler) { methods[name] = handler; }
+function charge(name, cents) {
+  const handler = methods[name];
+  if (!handler) throw new Error("Sin enchufe para: " + name);
+  return handler(cents);
+}
+
+// Los aparatos: cada uno se enchufa solo.
+register("card", (c) => "Cobrados " + c + " con tarjeta");
+register("cash", (c) => "Cajón abierto por " + c);
+// Añade aquí el tuyo:
+// register("qr", (c) => "QR por " + c);
+
+const out = ["card", "cash", "qr"].map((m) => {
+  try { return charge(m, 4950); } catch (e) { return e.message; }
+});
+document.getElementById("out").textContent = out.join("\\n");`}
+/>
+
+## El ejemplo, paso a paso
+
+En el código real el enchufe es un tipo. Primero, la forma que tiene que cumplir cualquier aparato:
+
+```ts title="src/payments/method.ts"
+export type PaymentMethod = {
+  id: string;
+  charge(cents: number): Promise<Receipt>;
+  refund(receipt: Receipt): Promise<void>;
+};
+```
+
+Fíjate en que `refund` viaja junto a `charge`. Ese es el punto: los siete `switch` dispersos existían porque cada operación se preguntaba por su cuenta "¿qué método es este?". Ahora la pregunta se hace una vez.
+
+Cada método de pago es un archivo que no conoce al checkout:
+
+```ts title="src/payments/card.ts"
+export const card: PaymentMethod = {
+  id: "card",
+  charge: (cents) => gateway.authorize(cents),
+  refund: (receipt) => gateway.void(receipt.authId),
+};
+```
+
+El registro es la regleta, y es el único sitio que enumera lo que existe:
+
+```ts title="src/payments/registry.ts"
+import { card } from "./card";
+import { cash } from "./cash";
+
+const registry = new Map([card, cash].map((m) => [m.id, m]));
+
+export function methodFor(id: string) {
+  const method = registry.get(id);
+  if (!method) throw new Error(`Sin enchufe para: ${id}`);
+  return method;
+}
+```
+
+Y el checkout deja de decidir:
+
+```ts title="src/checkout.ts"
+if (method === "card") return chargeCard(cents);   // [!code --]
+if (method === "cash") return openDrawer(cents);   // [!code --]
+return methodFor(method).charge(cents);            // [!code ++]
+```
+
+Aceptar QR es ahora `src/payments/qr.ts` más una línea en el registro. Los otros seis archivos no se enteran, que es exactamente lo que querías.
+
+<Callout type="warning" title="No pongas el enchufe antes de saber dónde">
+  Con un solo método de pago, este diseño es un `Map` de un elemento y tres
+  archivos de ceremonia. OCP se paga cuando ya viste el eje del cambio, no
+  cuando lo imaginas: espera al segundo caso real y ahí sabrás en qué pared va.
+</Callout>
+
+## Ahora tú
+
+Otro compañero propone quedarse con el `switch`, pero tipado:
+
+```ts title="src/checkout.ts"
+type MethodId = "card" | "cash" | "transfer";
+
+function charge(method: MethodId, cents: number) {
+  switch (method) {
+    case "card": return chargeCard(cents);
+    case "cash": return openDrawer(cents);
+    case "transfer": return createTransfer(cents);
+  }
+}
+```
+
+Con el union type, olvidar un caso al añadir `"qr"` es un error de compilación, no un `throw` en producción. ¿Esto viola OCP o lo resuelve?
+
+<Challenge summary="Ver el criterio">
+  Lo viola en la letra y a veces gana igual.
+
+  Sigues **modificando** al extender, así que OCP dice que no. Pero el daño que
+  OCP intenta evitar —enterarte en producción— ya lo cubre el compilador: añade
+  `"qr"` al union y los siete archivos se ponen en rojo antes del commit.
+
+  El criterio real es qué eje se mueve más. Si añades métodos de pago a menudo y
+  las operaciones son estables, el registro gana: un archivo nuevo por método.
+  Si los métodos son tres y fijos pero cada mes aparece una operación nueva
+  (imprimir, exportar, auditar), el `switch` exhaustivo gana: añades una función
+  y el compilador te lleva de la mano por los tres casos.
+
+  Elegir uno te encarece el otro. Ese trade-off tiene nombre y es el tema de la
+  sección siguiente.
+</Challenge>
+
+## Para ir más profundo
+
+**Se llama el problema de la expresión.** Philip Wadler lo bautizó en 1998: dado un conjunto de datos y un conjunto de operaciones, ningún diseño te deja añadir ambos sin tocar código existente. El polimorfismo abarata los datos nuevos y encarece las operaciones nuevas; el `switch` exhaustivo hace lo contrario. OCP no es gratis: **elige un eje y le paga al otro**. Cuando alguien dice "esto no cumple OCP", la pregunta útil es "¿abierto a qué?".
+
+**"Cerrado" quería decir "ya compilado".** Bertrand Meyer acuñó OCP en *Object-Oriented Software Construction* (1988), en un mundo donde modificar un módulo publicado obligaba a recompilar y redistribuir a todos sus clientes; su respuesta era la herencia. La versión que usamos hoy es la reformulación de Robert C. Martin en 1996, la *polymorphic OCP*, donde el enchufe es una interfaz y no una clase base. Por eso el consejo "hereda para extender" suena rancio: es literalmente la versión de hace treinta y ocho años.
+
+**La regla práctica es esperar.** El propio Martin lo dice sin adornos: no puedes cerrar un módulo contra todos los cambios posibles, solo contra los que ya viste. La táctica es *fool me once* — la primera vez que llega el cambio, lo metes a lo bruto; **la segunda** vez, ahí pones el enchufe, porque ya sabes en qué pared. Abstraer en el primer caso es adivinar, y el coste de adivinar mal (una abstracción que no encaja) es mayor que el de un `if` de más.
+
+**El registro tiene un coste que el `switch` no tiene.** Un `Map` que se llena por importación depende de que alguien importe el archivo: con *tree shaking* agresivo o *lazy loading* por ruta, un método de pago puede no registrarse nunca y fallar solo en runtime. Si te vas por ahí, importa el registro de forma explícita desde un único módulo de arranque y no confíes en efectos secundarios de import.
+
+## Para llevarte
+
+- **Abierto a extensión, cerrado a modificación** significa que añadir comportamiento sea añadir un archivo, no editar siete.
+- **No hay diseño abierto a todo:** decide si lo tuyo crece en datos o en operaciones y acepta que el otro eje te va a doler.
+- **El enchufe se pone al segundo cambio, no al primero:** antes de eso estás adivinando dónde hará falta.
+
+Busca en tu proyecto un `switch` o una cadena de `if` sobre el mismo campo y cuenta cuántos archivos repiten esa lista. Si son más de dos, ya tienes la pared donde va el enchufe. En el siguiente post: por qué una subclase puede pasar todos los tests y romper producción igual.

@@ -1,3 +1,6 @@
 - slug: content-pipeline
   title: Construyendo un pipeline de contenido
   description: Notas de conectar Velite, MDX y Next.js para este sitio.
+- slug: solid
+  title: SOLID, un principio a la vez
+  description: Los cinco principios explicados desde el problema que cada uno resuelve, con TypeScript y sin sermones.

@@ -1,0 +1,180 @@
+---
+title: Why do your tests need a database to check a business rule?
+description: 'The fifth SOLID principle is not about injecting dependencies. It is about something earlier: who writes the contract, and which way the arrow points.'
+date: 2026-08-24
+draft: true
+series: solid
+seriesOrder: 5
+tags:
+  - solid
+  - typescript
+  - architecture
+---
+
+Northbound Coffee rewards loyal customers: from ten orders on, 10% off. The whole rule fits in one line, but the file starts like this:
+
+```ts title="src/pricing/loyalty.ts"
+import { db } from "../infra/postgres";
+
+export async function loyaltyDiscount(customerId: string) {
+  const rows = await db.query("select count(*) from orders where customer = $1", [customerId]);
+  return rows[0].count >= 10 ? 0.1 : 0;
+}
+```
+
+To check that ten orders give 10%, the test needs Docker, a migration, and a `beforeEach` that truncates tables. Why?
+
+## The surprise: the arrow points the wrong way
+
+Look at what depends on what. `loyaltyDiscount` is the most valuable and most stable thing you own: a business decision that will outlive three refactors and two databases. `db` is the most volatile: a driver, a schema, a connection string, a vendor you might swap next year.
+
+And yet the arrow runs from the stable thing to the volatile one. Moving off Postgres forces you to open a file containing a business rule. That file should never find out.
+
+The slow test is just the symptom you notice first. What it's telling you is that **the shop's policy ended up underneath the plumbing**.
+
+## The intuition: who writes the contract
+
+Northbound Coffee wants to start delivering. There are two ways to set it up.
+
+The first: walk over to the courier down the street and adapt. They collect at 17:20, so the shop closes orders at 17:00. They use one specific box size, so the shop buys those boxes. It works — until the courier changes their schedule and the whole shop has to reorganize.
+
+The second: the shop writes a sheet of paper. *"Collection at 18:00, boxes up to 40 cm, delivery within 24 hours, proof of delivery with a signature."* Whoever wants the job signs it. Now the courier adapts to the shop, and switching provider means a different signature, not a reorganization.
+
+Either way the courier does the driving. What changes is **who wrote the contract**. That's the Dependency Inversion Principle (DIP): high-level modules shouldn't depend on low-level ones; both depend on abstractions — and the one upstairs writes those abstractions.
+
+Below, the same policy signed by two different providers. The policy never notices.
+
+<VanillaPlayground
+  title="Two signatories, one contract"
+  html={`<pre id="out"></pre>`}
+  css={`body { font: 13px ui-monospace, SFMono-Regular, monospace; padding: 12px; line-height: 1.7 }`}
+  js={`// The policy: it has no idea where the data comes from.
+async function loyaltyDiscount(history, customerId) {
+  const count = await history.countFor(customerId);
+  return count >= 10 ? 0.1 : 0;
+}
+
+// Two signatories of the same contract.
+const inMemory = { countFor: async () => 12 };
+const slowApi = {
+  countFor: () => new Promise((r) => setTimeout(() => r(3), 600)),
+};
+
+(async () => {
+  const lines = [
+    "in memory (12 orders): " + (await loyaltyDiscount(inMemory, "c-1")),
+    "slow api  (3 orders):  " + (await loyaltyDiscount(slowApi, "c-2")),
+  ];
+  document.getElementById("out").textContent = lines.join("\\n");
+})();`}
+/>
+
+## The example, step by step
+
+In the last post you already did half an inversion without calling it that: the report declared its own `DailySalesSource`. Here it gets finished, and the whole detail is **where the file lives**.
+
+This is the halfway attempt, the one almost everyone signs off on:
+
+```ts title="src/infra/order-history.ts"
+export type OrderHistory = {
+  countFor(customerId: string): Promise<number>;
+};
+```
+
+```ts title="src/pricing/loyalty.ts"
+import type { OrderHistory } from "../infra/order-history";
+```
+
+There's an interface, there's injection, the test no longer needs Docker. And the arrow **still points down**: `pricing` imports from `infra`. Delete the `infra` folder tomorrow and the business rule stops compiling. You didn't invert anything — you put an interface in the middle.
+
+The correct version moves one file, and that's the entire principle:
+
+```ts title="src/pricing/loyalty.ts"
+export type OrderHistory = {
+  countFor(customerId: string): Promise<number>;
+};
+
+export const loyaltyDiscount = async (
+  history: OrderHistory,
+  customerId: string
+) => ((await history.countFor(customerId)) >= 10 ? 0.1 : 0);
+```
+
+```ts title="src/infra/postgres-order-history.ts"
+import type { OrderHistory } from "../pricing/loyalty"; // [!code ++]
+
+export const postgresOrderHistory: OrderHistory = {
+  async countFor(customerId) {
+    const rows = await db.query("select count(*) ...", [customerId]);
+    return Number(rows[0].count);
+  },
+};
+```
+
+The `import` changed direction: now the plumbing knows the policy, not the other way round. And assembly happens in one place, as late as possible:
+
+```ts title="src/main.ts"
+const discount = await loyaltyDiscount(postgresOrderHistory, customerId);
+```
+
+The test that used to need Docker is now one line, and it still exercises the real rule:
+
+```ts title="src/pricing/loyalty.test.ts"
+expect(await loyaltyDiscount({ countFor: async () => 10 }, "c-1")).toBe(0.1);
+```
+
+<Callout type="warning" title="The abstraction can't smell of the detail either">
+  If `OrderHistory` returned a `QueryResult`, a `Row`, or an ORM-generated type,
+  the arrow would still be inverted and the coupling fully intact. This is the
+  forgotten half of the principle: *abstractions should not depend on details*.
+  The contract is written in the shop's vocabulary, not the provider's.
+</Callout>
+
+## Your turn
+
+Another teammate brings in a dependency injection container and registers everything at boot:
+
+```ts title="src/container.ts"
+container.register("orderHistory", () => new PostgresOrderHistory());
+
+// and in the rule:
+export async function loyaltyDiscount(customerId: string) {
+  const history = container.resolve<OrderHistory>("orderHistory");
+  return (await history.countFor(customerId)) >= 10 ? 0.1 : 0;
+}
+```
+
+There's no Postgres `import` in the rule file any more, and the test can register a double. Is this DIP?
+
+<Challenge summary="See the one-line test">
+  Not necessarily, and there's a check that settles the argument: **delete the
+  `infra` folder and see whether `pricing` compiles**.
+
+  If `OrderHistory` is still declared in `infra`, it won't: the arrow was never
+  inverted. What changed is how the dependency arrives, not who depends on whom.
+
+  And the container adds a problem of its own: the rule now depends on a
+  `resolve` keyed by a string, which no compiler checks. Typo `"orderHistory"`
+  and you find out at runtime. A plain parameter — like the previous section —
+  gives you the same substitution with type checking and no framework.
+</Challenge>
+
+## Going deeper
+
+**DIP, DI, and a DI container are three different things.** It's the most expensive confusion on this list. *DIP* is a rule about the **direction** of source-code dependencies. *Dependency injection* is a technique for handing a module its collaborators instead of letting it construct them. A *container* is a tool that automates the wiring. You can satisfy DIP with a function parameter and zero libraries, and you can use the fanciest container in the ecosystem while violating DIP in every file.
+
+**"Inversion" refers to source code, not control.** At runtime the flow still goes from policy to database: `loyaltyDiscount` calls Postgres, same as always. What gets inverted is the **compile-time dependency**, which now runs opposite to the flow of control. That's literally what the word means, and it's what lets you compile, test, and reason about the domain with no infrastructure in existence.
+
+**It's hexagonal before it was called hexagonal.** Alistair Cockburn's *ports and adapters* (2005) is DIP at application scale: the *port* is the interface and belongs to the inside; the *adapter* implements it from outside. Martin's Clean Architecture is the same idea with concentric circles and one rule: **dependencies point inward**. If you know DIP you already know both; what they add is folder names.
+
+**And not everything deserves a port.** Inverting a dependency costs a file, a name, and an indirection. The bill is worth paying when the thing below is **volatile** (a vendor, an external API, persistence) or when you need to **substitute it in tests**. Against `JSON.parse`, `Math.random`, or a pure function from your own repo, the interface is ceremony. The day you need to control the clock or randomness, invert those — not before.
+
+**And you can enforce it in CI instead of trusting discipline.** "`pricing` does not import from `infra`" is a lint rule, not a team convention. With `eslint-plugin-boundaries`, `dependency-cruiser`, or an `import/no-restricted-paths` rule, the inverted arrow stops depending on nobody being in a hurry on a Friday.
+
+## Takeaways
+
+- **DIP is a direction, not a framework:** if deleting `infra` breaks your domain, you have an interface in the middle but the arrow still points down.
+- **The abstraction is written and owned by the layer above**, and speaks its vocabulary: the moment the contract mentions a `Row` or an ORM type, the coupling is back.
+- **Invert what's volatile and what you need to substitute in tests**, not everything: a port over something stable is a file nobody will thank you for.
+
+Pick a business-rule file in your project and read its imports. If any of them points at an infrastructure folder, there's the first arrow to turn around — and that closes the series: all five principles were, the whole time, five questions about who depends on whom.
