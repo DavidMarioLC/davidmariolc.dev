@@ -128,3 +128,33 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `pnpm dlx ultracite fix` before committing to ensure compliance.
+
+---
+
+# Enrutamiento: OpenSpec vs. trabajo directo
+
+Antes de escribir código, clasifica la petición. No empieces a editar archivos hasta haber hecho esta clasificación.
+
+## Usa OpenSpec (`/opsx:propose`) si se cumple alguna:
+
+- Introduce una capacidad nueva: sección del sitio, ruta, layout, feature de blog, integración externa.
+- Toca 3+ archivos o cruza capas (contenido ↔ componentes ↔ config ↔ i18n).
+- Cambia el esquema de contenido (`velite.config`, frontmatter de MDX) o la estructura de rutas/URLs.
+- Afecta i18n de forma estructural: idioma nuevo, cambio de estrategia de routing, reorganización de claves.
+- Los requisitos son ambiguos o hay más de un diseño razonable y la elección importa.
+- El trabajo se hará en varias sesiones o quieres poder retomarlo con contexto.
+
+## Ve directo (sin OpenSpec):
+
+- Bug fix localizado en uno o dos archivos.
+- Ajustes de estilos, spacing, colores, copy o traducciones de cadenas existentes.
+- Refactor mecánico sin cambio de comportamiento (renombrar, extraer componente, mover archivo).
+- Config, dependencias, tooling, scripts.
+- Escribir o editar un post MDX con el esquema de contenido que ya existe.
+- Animaciones de un solo componente (para eso ya están las skills `animate` / `concept-animation`).
+
+## Ante la duda
+
+Pregunta en una línea antes de empezar: *"Esto lo veo como candidato a OpenSpec por X — ¿lo propongo o lo hago directo?"* La salida por defecto es preguntar, **no** proponer un spec por si acaso. Una propuesta de OpenSpec para un cambio de 5 líneas es fricción, no rigor.
+
+Si el usuario dice "hazlo directo", se hace directo — la clasificación es una recomendación, no un veto.
