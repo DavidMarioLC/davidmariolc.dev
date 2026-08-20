@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Mdx } from "@/components/mdx/mdx-content";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { CloudImage } from "@/components/site/cloud-image";
+import { ProjectMeta } from "@/components/site/project-meta";
 import { Button } from "@/components/ui/button";
 import { routing } from "@/i18n/routing";
 import {
@@ -81,6 +82,7 @@ export default async function ProjectPage({
     <article className="space-y-8">
       <header className="space-y-3">
         <h1 className="font-mono text-2xl">{project.title}</h1>
+        <ProjectMeta category={project.category} type={project.type} />
         <p className="text-muted-foreground">{project.description}</p>
       </header>
 

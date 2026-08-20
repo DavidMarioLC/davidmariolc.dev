@@ -109,11 +109,13 @@ export default async function HomePage({
           {projects.map((project) => (
             <ProjectCard
               actionLabel={t("viewProject")}
+              category={project.category}
               description={project.description}
               key={project.slug}
               preview={project.preview}
               slug={project.slug}
               title={project.title}
+              type={project.type}
             />
           ))}
         </div>

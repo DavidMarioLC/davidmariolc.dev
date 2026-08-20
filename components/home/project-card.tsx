@@ -1,5 +1,7 @@
+import type { Project } from "#site/content";
 import type { CloudImageSource } from "@/components/site/cloud-image";
 import { CloudImage } from "@/components/site/cloud-image";
+import { ProjectMeta } from "@/components/site/project-meta";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Link } from "@/i18n/routing";
@@ -15,6 +17,8 @@ export function ProjectCard({
   title,
   description,
   preview,
+  category,
+  type,
   actionLabel,
   headingLevel: Heading = "h3",
 }: {
@@ -22,6 +26,8 @@ export function ProjectCard({
   title: string;
   description: string;
   preview: CloudImageSource;
+  category: Project["category"];
+  type: Project["type"];
   actionLabel: string;
   headingLevel?: "h2" | "h3";
 }) {
@@ -33,6 +39,7 @@ export function ProjectCard({
         sizes="(max-width: 768px) 100vw, 33vw"
       />
       <CardContent className="flex flex-1 flex-col gap-2 p-4">
+        <ProjectMeta category={category} type={type} />
         <Heading className="font-mono text-base">{title}</Heading>
         <p className="text-muted-foreground text-sm leading-relaxed">
           {description}

@@ -40,7 +40,22 @@
     "empty": "No projects published yet.",
     "stack": "Stack",
     "live": "Visit site",
-    "repository": "Source code"
+    "repository": "Source code",
+    "type": {
+      "real": "Shipped work",
+      "learning": "Learning project"
+    },
+    "category": {
+      "web-app": "Web app",
+      "landing-page": "Landing page",
+      "website": "Website",
+      "mobile-app": "Mobile app",
+      "backend": "Backend",
+      "api": "API",
+      "tooling": "Tooling",
+      "library": "Library",
+      "design-system": "Design system"
+    }
   },
   "posts": {
     "title": "Posts",

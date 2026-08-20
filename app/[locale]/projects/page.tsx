@@ -61,6 +61,7 @@ export default async function ProjectsPage({
           {projects.map((project) => (
             <ProjectCard
               actionLabel={tHome("viewProject")}
+              category={project.category}
               description={project.description}
               // The page title is the only heading above the grid here.
               headingLevel="h2"
@@ -68,6 +69,7 @@ export default async function ProjectsPage({
               preview={project.preview}
               slug={project.slug}
               title={project.title}
+              type={project.type}
             />
           ))}
         </div>
