@@ -150,26 +150,7 @@
     "loading": "Cargando la animación…",
     "scrollHint": "Diagrama desplazable"
   },
-  "animations": {
-    "modelRouter": {
-      "title": "Cómo un router elige entre dos modelos",
-      "description": "Un router recibe una petición, lee su presupuesto de latencia y la envía al modelo rápido o al modelo potente.",
-      "steps": {
-        "request": "Toda petición entra por el router. El cliente no elige el modelo: solo pide una respuesta.",
-        "budget": "El router lee el presupuesto de latencia de la petición. Es un número, no una intuición.",
-        "fast": "Si el presupuesto es ajustado, la petición va al modelo rápido: menos calidad, respuesta en 200ms.",
-        "strong": "Si sobra tiempo, va al modelo potente. El camino del paso anterior queda descartado.",
-        "response": "La respuesta vuelve por el mismo canal. Desde fuera, ambos caminos son indistinguibles."
-      },
-      "nodes": {
-        "client": "Cliente",
-        "router": "Router",
-        "routerMeta": "decide por latencia",
-        "fast": "Modelo rápido",
-        "strong": "Modelo potente"
-      }
-    }
-  },
+  "animations": {},
   "challenge": {
     "reveal": "Ver respuesta"
   },

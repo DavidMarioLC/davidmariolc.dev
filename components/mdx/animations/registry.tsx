@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import type { ComponentType } from "react";
 
 /**
  * The allowlist of concept animations, and the only place an id becomes code.
@@ -16,7 +16,13 @@ import { useTranslations } from "next-intl";
  * loading skeleton.
  */
 
-function Skeleton() {
+/**
+ * The loading state every entry hands to `dynamic`. Exported because it is part
+ * of the shape of an entry, not an implementation detail of one: an animation
+ * that reserves no space makes the paragraph under it jump when its chunk
+ * lands.
+ */
+export function Skeleton() {
   const t = useTranslations("conceptAnimation");
 
   return (
@@ -40,12 +46,17 @@ function Skeleton() {
  * they travel in their own chunk. `ssr: false` is only legal inside a client
  * component, which is why this module is one — the same reason `Playground`
  * has a thin client wrapper.
+ *
+ * Empty right now: every animation there was belonged to a post that no longer
+ * exists. Annotated rather than inferred so that stays legal — `keyof` an empty
+ * inferred object is `never`, which makes the lookup in `ConceptAnimation`
+ * unusable. An entry looks like this:
+ *
+ *   "model-router": dynamic(
+ *     () => import("@/components/mdx/animations/model-router"),
+ *     { loading: () => <Skeleton />, ssr: false }
+ *   ),
  */
-export const animations = {
-  "model-router": dynamic(
-    () => import("@/components/mdx/animations/model-router"),
-    { loading: () => <Skeleton />, ssr: false }
-  ),
-} as const;
+export const animations: Record<string, ComponentType> = {};
 
 export type AnimationId = keyof typeof animations;

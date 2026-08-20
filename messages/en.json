@@ -150,26 +150,7 @@
     "loading": "Loading the animation…",
     "scrollHint": "Scrollable diagram"
   },
-  "animations": {
-    "modelRouter": {
-      "title": "How a router picks between two models",
-      "description": "A router receives a request, reads its latency budget and sends it to the fast model or the powerful one.",
-      "steps": {
-        "request": "Every request comes in through the router. The client does not pick the model: it just asks for an answer.",
-        "budget": "The router reads the request's latency budget. It is a number, not a hunch.",
-        "fast": "If the budget is tight, the request goes to the fast model: less quality, an answer in 200ms.",
-        "strong": "If there is time to spare, it goes to the powerful model. The previous step's path is discarded.",
-        "response": "The answer comes back down the same channel. From the outside, both paths are indistinguishable."
-      },
-      "nodes": {
-        "client": "Client",
-        "router": "Router",
-        "routerMeta": "routes by latency",
-        "fast": "Fast model",
-        "strong": "Powerful model"
-      }
-    }
-  },
+  "animations": {},
   "challenge": {
     "reveal": "Show answer"
   },
