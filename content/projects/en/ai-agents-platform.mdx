@@ -1,0 +1,76 @@
+---
+title: AI Agents Platform
+description: An internal platform that brings every business unit's AI agents into one place and puts them behind a single conversational chat.
+type: real
+category: web-app
+date: 2025-04-01
+order: 1
+featured: true
+draft: true
+preview:
+  publicId: portfolio/projects/ai-agents-platform/hero
+  alt: The platform's workspace directory, one workspace per business unit
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: React
+    logo: react
+  - name: React Query
+    logo: reactquery
+  - name: shadcn/ui
+    logo: shadcn
+  - name: Supabase
+    logo: supabase
+  - name: n8n
+    logo: n8n
+---
+
+## Snapshot
+
+- **Role** — Frontend Engineer: the whole interface, the frontend architecture, the n8n integration, deployment, and proposing what to build next.
+- **Scope** — Internal tool in production: 50+ business units, 80+ agents, 100+ users.
+- **Outcome** — The 80+ agents that used to live scattered across n8n are now inventoried in one place and used through a single chat.
+
+## The problem
+
+Every business unit built its own agents in n8n, its own way. Nobody had the full list: not which agents already existed, not which ones each unit was using, not which ones were missing. The cost wasn't just untidiness — a unit had no way of knowing whether what it needed had already been built somewhere else in the company.
+
+## Key decisions
+
+- **shadcn/ui instead of building the component system** — the idea had to be seen working before it could be argued about, and with the components already solved the interface moved at the speed of the product. The tradeoff: `TODO: what it cost — a generic-looking UI, components rewritten as it grew, inherited theming or accessibility decisions?`
+- **Supabase because the company already paid for it** — availability, not a technical fit: using what was already there skipped an infrastructure debate that would have delayed the MVP. The tradeoff: `TODO: what it actually limited — auth, RLS, connection limits, region`.
+- **n8n's REST API instead of reimplementing agent execution** — the team already lived in n8n and knew how to build there; reimplementing that layer would have meant teaching them another tool on top of maintaining it. The tradeoff: the platform is tied to n8n and to how each unit wired its own workflow: `TODO: what hurts about that dependency — latency, responses without streaming, failures in workflows you don't own`.
+- **No mobile in the MVP** — validating the idea with real users came first. The tradeoff: the platform was born desktop-only.
+
+## Outcome
+
+- 50+ business units with their agents centralized, 80+ agents inventoried, and 100+ people using them through the platform.
+- Still under active development: the MVP didn't close the project, it opened it.
+- `TODO: how long it took to find and use an agent before (ask on Slack, get someone to run it in n8n) versus now.`
+- `TODO: how many duplicate or unknown agents surfaced once everything was inventoried — the easiest number to pull.`
+
+## What I'd do differently
+
+- `TODO: is mobile still missing? If so, this is the bullet: the debt taken on to reach the MVP that still shapes how the platform gets used.`
+
+## Gallery
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/ai-agents-platform/gallery-1"
+    alt="Dashboard ranking agents by number of runs, next to a list of users with no recent activity"
+    width={1920}
+    height={1080}
+    caption="The dashboard answers what nobody owned before: which agents actually get used, by how many people, and who stopped showing up."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/ai-agents-platform/gallery-2"
+    alt="Chat with a creative agent returning an edited image and a link to the folder holding the result"
+    width={1920}
+    height={1080}
+    caption="The unit asks for the change in plain language and gets the deliverable back; underneath, it runs the same n8n workflow as always."
+  />
+</Gallery>

@@ -1,0 +1,76 @@
+---
+title: AI Agents Platform
+description: Plataforma interna que centraliza los agentes de IA de todos los negocios de la empresa y los pone a mano en un chat conversacional.
+type: real
+category: web-app
+date: 2025-04-01
+order: 1
+featured: true
+draft: true
+preview:
+  publicId: portfolio/projects/ai-agents-platform/hero
+  alt: Directorio de workspaces de la plataforma, uno por cada negocio de la empresa
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: React
+    logo: react
+  - name: React Query
+    logo: reactquery
+  - name: shadcn/ui
+    logo: shadcn
+  - name: Supabase
+    logo: supabase
+  - name: n8n
+    logo: n8n
+---
+
+## Snapshot
+
+- **Rol** — Frontend Engineer: la interfaz completa, la arquitectura de front, la integración con n8n, el despliegue y la propuesta de nuevas features.
+- **Alcance** — Herramienta interna en producción: +50 negocios, +80 agentes, +100 usuarios.
+- **Resultado** — Los +80 agentes que vivían sueltos en n8n hoy están inventariados en un solo lugar y se usan desde un único chat.
+
+## El problema
+
+Cada negocio de la empresa montaba sus agentes en n8n por su cuenta y a su manera. Nadie tenía la lista completa: ni qué agentes existían ya, ni cuáles usaba cada negocio, ni cuáles le faltaban. La consecuencia no era solo desorden — era que un negocio no podía saber si lo que necesitaba ya estaba construido en otro.
+
+## Decisiones clave
+
+- **shadcn/ui en vez de construir el sistema de componentes** — había que enseñar la idea funcionando antes de poder discutirla, y con los componentes resueltos la interfaz avanzó al ritmo del producto. A cambio, `TODO: qué costó — ¿interfaz genérica, componentes reescritos al crecer, decisiones de theming o accesibilidad heredadas?`
+- **Supabase porque ya estaba contratado** — la elección fue de disponibilidad, no técnica: usar lo que la empresa ya tenía evitó una discusión de infraestructura que habría retrasado el MVP. A cambio, `TODO: qué limitó en la práctica — auth, RLS, límites de conexiones, región`.
+- **La REST API de n8n en vez de reimplementar la ejecución de agentes** — el equipo ya vivía en n8n y sabía construir ahí; reimplementar esa capa habría significado enseñarles otra herramienta además de mantenerla. A cambio, la plataforma queda atada a n8n y a cómo cada negocio montó su workflow: `TODO: qué duele de esa dependencia — latencia, respuestas sin streaming, errores de workflows ajenos`.
+- **Sin versión móvil en el MVP** — la prioridad era validar la idea cuanto antes con usuarios reales. A cambio, la plataforma nació solo para escritorio.
+
+## Resultado
+
+- +50 negocios con sus agentes centralizados, +80 agentes inventariados y +100 usuarios usándolos desde la plataforma.
+- Sigue en desarrollo activo: el MVP no cerró el proyecto, lo abrió.
+- `TODO: cuánto tardaba alguien en encontrar y usar un agente antes (preguntar por Slack, pedir que lo corran en n8n) y cuánto ahora.`
+- `TODO: cuántos agentes duplicados o desconocidos aparecieron al centralizar — el dato más fácil de sacar del inventario.`
+
+## Qué haría distinto
+
+- `TODO: ¿el móvil sigue pendiente? Si es así, este es el bullet: la deuda que se aceptó para llegar al MVP y todavía condiciona cómo se usa la plataforma.`
+
+## Galería
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/ai-agents-platform/gallery-1"
+    alt="Dashboard con el ranking de agentes por número de ejecuciones y la lista de usuarios sin actividad"
+    width={1920}
+    height={1080}
+    caption="El dashboard responde lo que antes no tenía dueño: qué agentes se usan de verdad, por cuánta gente, y quién dejó de entrar."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/ai-agents-platform/gallery-2"
+    alt="Chat con un agente de creatividades que devuelve una imagen editada y el enlace a la carpeta con el resultado"
+    width={1920}
+    height={1080}
+    caption="El negocio pide el cambio en lenguaje natural y recibe el entregable; por debajo corre el mismo workflow de n8n de siempre."
+  />
+</Gallery>
