@@ -518,6 +518,77 @@
     @apply my-8 flex items-center justify-center rounded-md border border-border border-dashed bg-card;
   }
 
+  /* --- Concept animations --- */
+
+  .concept-animation {
+    @apply my-8 overflow-hidden rounded-md border border-border bg-card;
+  }
+  .concept-animation-title {
+    @apply border-border border-b px-4 py-3 font-heading text-foreground text-sm;
+  }
+  /* The diagram carries its own near-black ground: its palette is fixed per
+     animation, so it does not follow the card surface. */
+  .concept-animation-stage {
+    /* A dot grid gives the diagram a canvas to sit on instead of a void. It
+       lives here, not in each animation's SVG, so every diagram gets it without
+       carrying a `<pattern>`. At 4% it reads as texture, not as content — any
+       louder and it competes with the 1px connections. `local` scrolls it with
+       the diagram, so the grid belongs to the canvas rather than the viewport. */
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      #ffffff0a 1px,
+      transparent 0
+    );
+    /* A dot grid gives the diagram a canvas to sit on instead of a void. It
+       lives here, not in each animation's SVG, so every diagram gets it without
+       carrying a `<pattern>`. At 4% it reads as texture, not as content — any
+       louder and it competes with the 1px connections. `local` scrolls it with
+       the diagram, so the grid belongs to the canvas rather than the viewport. */
+    background-attachment: local;
+    background-size: 16px 16px;
+    @apply overflow-x-auto bg-[#0a0a0a] p-4;
+  }
+  .concept-animation-stage:focus-visible {
+    @apply outline-2 outline-ring -outline-offset-2;
+  }
+  /* Below this width the diagram stops shrinking and the stage scrolls, the way
+     a wide table does. Letting it scale all the way down puts a 13-unit label at
+     5px on a phone: the diagram would fit and be unreadable. 35rem keeps the
+     smallest label near 10px. */
+  .concept-animation-stage svg {
+    min-width: 35rem;
+  }
+  /* A fixed minimum keeps the block from resizing as captions of different
+     lengths replace each other. */
+  .concept-animation-caption {
+    @apply min-h-16 border-border border-b px-4 py-3 text-muted-foreground text-sm;
+  }
+  .concept-animation-controls {
+    @apply flex flex-wrap items-center gap-2 px-4 py-3;
+  }
+  /* Icon-only, so the 44px is the touch target and the icon just sits in it. */
+  .concept-animation-button {
+    @apply inline-flex size-11 items-center justify-center rounded-sm border border-border text-muted-foreground transition-colors;
+  }
+  .concept-animation-button:hover:not(:disabled) {
+    @apply text-foreground;
+  }
+  .concept-animation-button:hover:not(:disabled) {
+    @apply bg-accent;
+  }
+  .concept-animation-button:focus-visible {
+    @apply outline-2 outline-ring outline-offset-2;
+  }
+  .concept-animation-button:disabled {
+    @apply cursor-not-allowed text-muted-foreground opacity-50;
+  }
+  .concept-animation-indicator {
+    @apply ml-auto font-mono text-muted-foreground text-xs;
+  }
+  .concept-animation-skeleton {
+    @apply my-8 flex items-center justify-center rounded-md border border-border border-dashed bg-card;
+  }
+
   /* --- Elements that appear rarely but must not fall back to browser defaults --- */
 
   .prose :is(h5, h6) {

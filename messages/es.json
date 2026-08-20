@@ -141,6 +141,15 @@
     "next": "Siguiente",
     "currentPart": "Estás aquí"
   },
+  "conceptAnimation": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "play": "Reproducir",
+    "restart": "Reiniciar",
+    "stepIndicator": "Paso {current} de {total}",
+    "loading": "Cargando la animación…",
+    "scrollHint": "Diagrama desplazable"
+  },
   "challenge": {
     "reveal": "Ver respuesta"
   },

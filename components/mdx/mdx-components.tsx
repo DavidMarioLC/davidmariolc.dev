@@ -4,6 +4,7 @@ import { Callout } from "@/components/mdx/callout";
 import { Challenge } from "@/components/mdx/challenge";
 import { CodeBlock } from "@/components/mdx/code-block";
 import { CommandCompare } from "@/components/mdx/command-compare";
+import { ConceptAnimation } from "@/components/mdx/concept-animation";
 import { Gallery } from "@/components/mdx/gallery";
 import { MdxLink } from "@/components/mdx/mdx-link";
 import { Playground } from "@/components/mdx/playground/playground";
@@ -65,6 +66,7 @@ export const mdxComponents = {
   Callout,
   Challenge,
   CommandCompare,
+  ConceptAnimation,
   figure: Figure,
   Gallery,
   img: MdxImage,
