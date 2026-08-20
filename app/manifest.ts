@@ -43,7 +43,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       },
     ],
     name: t("homeTitle"),
-    short_name: t("siteName"),
+    // Its own string, not `siteName`: this one is the label under the launcher
+    // icon, where roughly 12 characters fit, while `siteName` titles the feed.
+    short_name: t("shortName"),
     start_url: "/",
     theme_color: BACKGROUND,
   };
