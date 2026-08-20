@@ -139,6 +139,8 @@ const profile = defineCollection({
       avatar: cloudinaryImage,
       community: s.array(brandRef).default([]),
       communityIntro: s.string(),
+      /** Where "view all" goes for community: the GDG Ica site, not a page here. */
+      communityUrl: s.string().url().optional(),
       country: s.string(),
       countryFlag: s.string(),
       /** Each paragraph is a list of runs so brand logos can sit inline in the text. */

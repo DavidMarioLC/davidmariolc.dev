@@ -126,7 +126,7 @@ export default async function HomePage({
       <Section
         title={t("community")}
         viewAllAriaLabel={t("viewAllOf", { section: t("community") })}
-        viewAllHref="/community"
+        viewAllHref={profile.communityUrl}
         viewAllLabel={t("viewAll")}
       >
         <p className="text-muted-foreground leading-relaxed">
