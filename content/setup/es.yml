@@ -1,15 +1,155 @@
+# El bloque de hardware lleva un valor plano; el resto lleva entradas.
 - block: hardware
   order: 1
   label: Laptop
   value: MacBook Pro 14" M1
+- block: hardware
+  order: 2
+  label: Monitor
+  value: DELL 24" P2419H
+- block: hardware
+  order: 3
+  label: Teclado
+  value: Keychron K3D3
+- block: hardware
+  order: 4
+  label: Mouse
+  value: Logitech MX Master 3S
+
 - block: stack
   order: 1
   label: Lenguaje
   entries:
     - name: TypeScript
       logo: typescript
+    - name: Python
+      logo: python
+    - name: Java
+      logo: java
+- block: stack
+  order: 2
+  label: Frameworks de frontend
+  entries:
+    - name: Next.js
+      logo: nextjs
+    - name: Angular
+      logo: angular
+    - name: Astro
+      logo: astro
+    - name: Vue.js
+      logo: vue
+- block: stack
+  order: 3
+  label: Frameworks de backend
+  entries:
+    - name: Spring Boot
+      logo: spring
+    - name: FastAPI
+      logo: fastapi
+    - name: NestJS
+      logo: nestjs
+- block: stack
+  order: 4
+  label: Estilos
+  entries:
+    - name: Tailwind CSS
+      logo: tailwindcss
+    - name: shadcn/ui
+      logo: shadcn
+- block: stack
+  order: 5
+  label: Base de datos
+  entries:
+    - name: Supabase
+      logo: supabase
+    - name: PostgreSQL
+      logo: postgresql
+- block: stack
+  order: 6
+  label: CMS headless
+  entries:
+    - name: Strapi
+      logo: strapi
+    - name: Sanity
+      logo: sanity
+- block: stack
+  order: 7
+  label: Contenedores
+  entries:
+    - name: Docker
+      logo: docker
+- block: stack
+  order: 8
+  label: Nube
+  entries:
+    - name: AWS
+      logo: aws
+    - name: GCP
+      logo: gcp
+- block: stack
+  order: 9
+  label: Linter / formateador
+  entries:
+    - name: Biome
+      logo: biome
+- block: stack
+  order: 10
+  label: Testing
+  entries:
+    - name: Jest
+      logo: jest
+    - name: Vitest
+      logo: vitest
+    - name: Playwright
+      logo: playwright
+- block: stack
+  order: 11
+  label: IA / asistente de código
+  entries:
+    - name: Claude Code
+      logo: claude
+
+- block: editor
+  order: 1
+  label: Editor
+  entries:
+    - name: VS Code
+      logo: vscode
+    - name: IntelliJ IDEA
+      logo: intellij
+- block: editor
+  order: 2
+  label: Terminal
+  entries:
+    - name: Warp
+      logo: warp
+# Sin logotipo: se muestran solo como texto, que la fila admite a propósito.
 - block: editor
   order: 3
   label: Tema
   entries:
     - name: Dark 2026
+- block: editor
+  order: 4
+  label: Tipografía
+  entries:
+    - name: JetBrains Mono
+
+- block: apps
+  order: 1
+  label: Notas
+  entries:
+    - name: Notion
+      logo: notion
+- block: apps
+  order: 2
+  label: Diseño
+  entries:
+    - name: Figma
+      logo: figma
+- block: apps
+  order: 3
+  label: Comunicación
+  entries:
+    - name: Slack
+      logo: slack

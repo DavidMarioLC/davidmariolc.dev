@@ -59,10 +59,10 @@
 ## 5. Fase 5 — Books y Setup
 
 - [ ] 5.1 Crear `app/[locale]/books/page.tsx`: cabecera con título, subtítulo e intro; los tres grupos de estado de lectura en orden fijo; rejilla de portadas en cards con la alternativa textual construida desde título y autor; grupos vacíos omitidos
-- [ ] 5.2 Crear `app/[locale]/setup/page.tsx`: cabecera con título y subtítulo, bloque de hardware como rejilla de cards etiqueta/valor, y los bloques de stack, editor y apps como filas categoría → entradas con logotipo opcional y sin enlaces
+- [x] 5.2 Crear `app/[locale]/setup/page.tsx`: cabecera con título y subtítulo, bloque de hardware como rejilla de cards etiqueta/valor, y los bloques de stack, editor y apps como filas categoría → entradas con logotipo opcional y sin enlaces
 - [x] 5.3 Enlazar la sección de comunidad del home al sitio de la comunidad, con la URL declarada en el contenido y tratamiento de enlace externo
 - [x] 5.4 Confirmar que los logros se listan completos en el home, sin página de índice aparte
-- [ ] 5.5 Poblar el contenido real de Books y Setup en ambos idiomas
+- [ ] 5.5 Poblar el contenido real de Books en ambos idiomas (Setup poblado en 5.2)
 - [ ] 5.6 Verificar que cada sección sin contenido en un idioma muestra su estado vacío traducido y no un 404
 
 ## 6. Fase 6 — SEO, sindicación y cierre
