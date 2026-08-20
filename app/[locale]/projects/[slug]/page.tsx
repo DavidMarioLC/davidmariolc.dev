@@ -84,13 +84,6 @@ export default async function ProjectPage({
         <p className="text-muted-foreground">{project.description}</p>
       </header>
 
-      <CloudImage
-        className="aspect-video w-full rounded-md border border-border"
-        image={project.preview}
-        priority
-        sizes="(max-width: 768px) 100vw, 640px"
-      />
-
       {project.stack.length > 0 && (
         <section>
           <h2 className="font-mono text-sm">{t("stack")}</h2>
@@ -124,6 +117,13 @@ export default async function ProjectPage({
           ))}
         </ul>
       )}
+
+      <CloudImage
+        className="aspect-video w-full rounded-md border border-border"
+        image={project.preview}
+        priority
+        sizes="(max-width: 768px) 100vw, 640px"
+      />
 
       <div className="prose">
         <Mdx code={project.content} />
