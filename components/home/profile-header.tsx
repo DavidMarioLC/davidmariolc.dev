@@ -1,15 +1,14 @@
+import { PeruFlag } from "@/components/home/peru-flag";
 import type { CloudImageSource } from "@/components/site/cloud-image";
 import { CloudImage } from "@/components/site/cloud-image";
 
 export function ProfileHeader({
   name,
   country,
-  countryFlag,
   avatar,
 }: {
   name: string;
   country: string;
-  countryFlag: string;
   avatar: CloudImageSource;
 }) {
   return (
@@ -22,8 +21,13 @@ export function ProfileHeader({
       />
       <h1 className="flex items-center gap-2 font-mono text-xl">
         {name}
-        <span aria-label={country} role="img" title={country}>
-          {countryFlag}
+        <span
+          aria-label={country}
+          className="relative -translate-y-0.5"
+          role="img"
+          title={country}
+        >
+          <PeruFlag className="mx-0.5 mb-0.5 inline-block h-3.5 w-5 align-text-bottom" />
         </span>
       </h1>
     </div>

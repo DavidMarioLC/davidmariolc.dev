@@ -93,7 +93,6 @@ export default async function HomePage({
         <ProfileHeader
           avatar={profile.avatar}
           country={profile.country}
-          countryFlag={profile.countryFlag}
           name={profile.name}
         />
         <Intro paragraphs={profile.intro} />
