@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -66,6 +68,15 @@ export default async function LocaleLayout({
           </main>
           <SiteFooter />
         </NextIntlClientProvider>
+        {/*
+          Both render null and skip their beacon outside production, so there
+          is nothing to guard here. The /next entrypoints already wrap
+          themselves in Suspense and resolve the dynamic segments of the route,
+          so a post is reported as /[locale]/posts/[slug] and not as one row
+          per slug.
+        */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
