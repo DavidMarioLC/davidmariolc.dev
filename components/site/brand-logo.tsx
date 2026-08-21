@@ -36,6 +36,9 @@ export function BrandLogo({
           aria-hidden="true"
           className={cn("inline-block bg-current", className)}
           style={{
+            // The span has no intrinsic size, so the mark's own ratio has to
+            // come from the registry for `w-auto` to have anything to resolve.
+            aspectRatio: `${logo.entry.width} / ${logo.entry.height}`,
             maskImage: `url(${logo.entry.src})`,
             maskPosition: "center",
             maskRepeat: "no-repeat",

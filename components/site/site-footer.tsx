@@ -30,12 +30,20 @@ function FooterColumn({
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                <BrandLogo className="size-4 shrink-0" mono name={link.logo} />
+                <BrandLogo
+                  className="h-4 w-auto shrink-0"
+                  mono
+                  name={link.logo}
+                />
                 <span>{link.name}</span>
               </a>
             ) : (
               <span className="inline-flex items-center gap-2">
-                <BrandLogo className="size-4 shrink-0" mono name={link.logo} />
+                <BrandLogo
+                  className="h-4 w-auto shrink-0"
+                  mono
+                  name={link.logo}
+                />
                 <span>{link.name}</span>
               </span>
             )}

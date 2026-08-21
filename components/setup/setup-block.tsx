@@ -71,7 +71,7 @@ export function EntryRows({ items }: { items: Item[] }) {
                 className="inline-flex items-center gap-1.5"
                 key={entry.name}
               >
-                <BrandLogo className="size-4 shrink-0" name={entry.logo} />
+                <BrandLogo className="h-4 w-auto shrink-0" name={entry.logo} />
                 <span className="font-medium">
                   {entry.name}
                   {index < item.entries.length - 1 ? "," : ""}

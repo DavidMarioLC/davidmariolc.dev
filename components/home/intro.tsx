@@ -22,7 +22,7 @@ function IntroRun({ run }: { run: Run }) {
         rel="noopener noreferrer"
         target="_blank"
       >
-        <BrandLogo className="size-4 translate-y-0.5" name={run.logo} />
+        <BrandLogo className="h-4 w-auto translate-y-0.5" name={run.logo} />
         <span>{run.text}</span>
       </a>
     );
@@ -31,7 +31,7 @@ function IntroRun({ run }: { run: Run }) {
   if (run.logo) {
     return (
       <span className="inline-flex items-baseline gap-1 whitespace-nowrap font-medium text-foreground">
-        <BrandLogo className="size-4 translate-y-0.5" name={run.logo} />
+        <BrandLogo className="h-4 w-auto translate-y-0.5" name={run.logo} />
         <span>{run.text}</span>
       </span>
     );

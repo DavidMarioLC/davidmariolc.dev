@@ -92,7 +92,7 @@ export default async function ProjectPage({
           <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
             {project.stack.map((tech) => (
               <li className="flex items-center gap-2" key={tech.name}>
-                <BrandLogo className="size-4 shrink-0" name={tech.logo} />
+                <BrandLogo className="h-4 w-auto shrink-0" name={tech.logo} />
                 <span>{tech.name}</span>
               </li>
             ))}
