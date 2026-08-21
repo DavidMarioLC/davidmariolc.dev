@@ -161,6 +161,7 @@ const profile = defineCollection({
       /** Where "view all" goes for community: the GDG Ica site, not a page here. */
       communityUrl: s.string().url().optional(),
       country: s.string(),
+      email: s.string().email(),
       /** Each paragraph is a list of runs so brand logos can sit inline in the text. */
       intro: s.array(
         s.object({
