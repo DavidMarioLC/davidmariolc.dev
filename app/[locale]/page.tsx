@@ -5,10 +5,10 @@ import {
   getTranslations,
   setRequestLocale,
 } from "next-intl/server";
-import { PostList } from "@/components/blog/post-list";
 import { AchievementRow } from "@/components/home/achievement-row";
 import { CommunityGallery } from "@/components/home/community-gallery";
 import { Intro } from "@/components/home/intro";
+import { PostRow } from "@/components/home/post-row";
 import { ProfileHeader } from "@/components/home/profile-header";
 import { ProjectCard } from "@/components/home/project-card";
 import { Section } from "@/components/site/section";
@@ -134,7 +134,13 @@ export default async function HomePage({
             </p>
           </div>
         ) : (
-          <PostList posts={posts.slice(0, HOME_POSTS_LIMIT)} />
+          <ul className="space-y-1">
+            {posts.slice(0, HOME_POSTS_LIMIT).map((post) => (
+              <li key={post.slug}>
+                <PostRow date={post.date} slug={post.slug} title={post.title} />
+              </li>
+            ))}
+          </ul>
         )}
       </Section>
 
