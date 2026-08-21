@@ -115,6 +115,11 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Smooth scrolling only while an anchor is the destination. On a route change
+     the router scrolls to the top, and a smooth scroll there gets cut short by
+     the incoming page's layout, parking the reader mid-document. */
+  html:has(:target) {
     scroll-behavior: smooth;
   }
   /* Any scroll to a heading lands below the top edge, not flush against it.
