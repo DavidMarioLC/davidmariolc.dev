@@ -1,0 +1,72 @@
+---
+title: Basic Design System
+description: "Librería de componentes brutalistas en CSS puro, distribuida por CDN: una etiqueta link y funciona con HTML plano o con cualquier framework."
+type: learning
+category: library
+date: 2026-07-01
+order: 6
+draft: true
+preview:
+  publicId: portfolio/projects/basic-design-system/hero
+  alt: Portada de la librería con el lema Less is the system y componentes de muestra
+  width: 1920
+  height: 1080
+stack:
+  - name: CSS
+  - name: HTML
+  - name: BEM
+  - name: jsDelivr
+  - name: GitHub
+    logo: github
+  - name: Vercel
+links:
+  live: https://basic-design-system.vercel.app/
+  repository: https://github.com/DavidMarioLC/basic-design-system
+---
+
+## Snapshot
+
+- **Objetivo** — comprobar si una librería de componentes se puede distribuir sin build, sin paquete npm y sin framework: un solo archivo CSS servido por CDN y consumido desde HTML plano.
+- **Alcance** — 14 componentes en un único `styles.css`: button, radio, checkbox, input, slider, select, avatar, badge, accordion, table, spinner, alert, card y modal. Fuera del alcance a propósito: variantes de tema, dark mode y cualquier JavaScript de la librería.
+- **Qué comprobé** — funciona con una sola etiqueta `<link>` a jsDelivr: **15,7 KB** de CSS, **2,5 KB** comprimido, cero pasos de build en el proyecto que la consume.
+
+## Por qué este proyecto
+
+Me interesaba entender cómo se construyen y, sobre todo, cómo se distribuyen estas librerías: la parte que no se ve cuando uno instala una y ya. Elegí CSS puro justamente porque quita del medio el bundler y deja el problema desnudo — nombres de clases, tokens y cómo llega el archivo al navegador de otro. Y elegí un estilo brutalista porque no tiene sombras, degradados ni curvas que disimulen: si la estructura de un componente está mal resuelta, se nota.
+
+## Decisiones clave
+
+- **Distribuir desde el repositorio con jsDelivr en vez de publicar en npm** — quería el camino más corto entre un commit y alguien usándolo: un `<link>` y listo, sin instalar nada. A cambio, no hay versionado real: la URL apunta a `@main`, así que cualquiera que la enlace recibe lo último que haya en la rama, no una versión que él eligió.
+- **Nombrar todo con BEM** — sin build ni scoping, el aislamiento entre componentes tiene que salir de la convención de nombres o no sale de ningún lado. A cambio, las clases son largas y verbosas en el HTML de quien la usa, que es el precio de no tener CSS Modules ni utilidades.
+- **Tokens en custom properties, un solo tema** — 39 variables en `:root` concentran color, tipografía y espaciado, así que cambiar el sistema es tocar ese bloque y no los 14 componentes. A cambio, el sistema tiene una sola apariencia: sin variantes, cambiar el tema es reemplazar valores, no elegir entre opciones.
+
+## Qué aprendí
+
+- La distribución es una decisión de diseño, no un trámite del final. Servir el archivo desde `@main` hace que publicar sea trivial y que actualizar sea peligroso: el consumidor no tiene forma de quedarse en la versión que probó. Etiquetar releases no es burocracia, es lo que hace la librería usable por alguien que no seas tú.
+- Un archivo único fue la decisión correcta para aprender y la equivocada para consumir: quien solo quiere el botón se descarga los 14 componentes, porque sin build no hay forma de importar una parte. A 2,5 KB comprimidos no duele, pero es un techo — el enfoque no escala a un sistema grande.
+- Los tokens resuelven la coherencia, no la variación. Con 39 variables el sistema se ve consistente, pero un componente sigue teniendo una sola forma: para tener variantes hay que diseñarlas, y eso es trabajo de sistema, no de CSS.
+
+## Qué haría distinto
+
+- Publicaría con etiquetas de versión y enlazaría a una versión fija en vez de a `@main`, para que actualizar sea una decisión del que la usa.
+- Agregaría dark mode. Con los tokens ya centralizados es sobre todo redefinir el bloque de color, y es la prueba real de que la capa de tokens sirve para algo.
+
+## Evidencia
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/basic-design-system/gallery-1"
+    alt="Catálogo de componentes: button, radio, checkbox, input, slider, select, avatar, badge, accordion y más"
+    width={1920}
+    height={1080}
+    caption="Cada componente se muestra con sus estados, incluido el deshabilitado: sin JavaScript, todo el estado que existe es el que el HTML ya sabe expresar."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/basic-design-system/gallery-2"
+    alt="Ejemplos compuestos: tabla de precios, FAQ, formulario de registro, tarjeta de perfil y notificaciones"
+    width={1920}
+    height={1080}
+    caption="La prueba de que un sistema funciona no es el catálogo sino esto: piezas armadas entre sí sin escribir CSS nuevo."
+  />
+</Gallery>

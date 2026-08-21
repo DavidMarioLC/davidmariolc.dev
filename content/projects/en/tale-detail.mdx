@@ -1,0 +1,71 @@
+---
+title: Tale Detail
+description: "Landing page for an architectural design and visualization consultancy: their first site, with the content in the client's hands."
+type: real
+category: landing-page
+date: 2025-01-01
+order: 5
+draft: true
+preview:
+  publicId: portfolio/projects/tale-detail/hero
+  alt: Homepage with a full-width architectural illustration and the contact call to action
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: TypeScript
+    logo: typescript
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: shadcn/ui
+    logo: shadcn
+  - name: Sanity
+    logo: sanity
+  - name: Motion
+  - name: Vercel
+links:
+  live: https://www.taledetail.design/
+---
+
+## Snapshot
+
+- **Role** — Frontend Developer: I built the whole landing page, configured the CMS and deployed the site.
+- **Scope** — A single-page site for an architectural design and visualization consultancy: who they are, methodology, services, projects and contact.
+- **Outcome** — Lighthouse scores of 97 performance, 96 accessibility, 100 best practices and 100 SEO.
+
+## The problem
+
+Tale Detail turns urban data and complex projects into visual material their clients use to win tenders and competitions. They had no site: a studio whose entire craft is visual representation had nowhere to show it, and every conversation with a new client started with nothing to point at.
+
+## Key decisions
+
+- **Sanity as the CMS, with a schema modeled around the landing page** — the client asked for something simple with a shallow learning curve so they could upload and adjust content without depending on me. The tradeoff: a one-page site now carries another service to maintain, and its content lives in documents rather than in the repository.
+- **Animate the sections with Motion** — the consultancy sells visual work, so the page had to hold up to that expectation as you scroll through it. The tradeoff: more JavaScript on a site already loading large images, which is what had to be watched to keep the performance score from slipping.
+- **One page with anchor navigation** — the flow is a presentation of the consultancy, not a catalog: the point is to read straight through to the form. The tradeoff: no service or project has its own URL to share on its own or rank independently.
+
+## Outcome
+
+- Lighthouse in production: **97** performance, **96** accessibility, **100** best practices, **100** SEO.
+- It's the consultancy's first site — before this, they had nowhere to show their work.
+- The client publishes and edits content in Sanity without going through a developer.
+
+## Gallery
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/tale-detail/gallery-1"
+    alt="About section with the consultancy's introduction text and logo"
+    width={1920}
+    height={1080}
+    caption="The introduction is the first thing after the hero: it defines the consultancy before naming a single service."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/tale-detail/gallery-2"
+    alt="Contact form asking for the visitor's professional profile and area of interest"
+    width={1920}
+    height={1080}
+    caption="The form asks for profile — student, independent architect, studio — and interest, so an inquiry arrives already classified instead of as a loose message."
+  />
+</Gallery>

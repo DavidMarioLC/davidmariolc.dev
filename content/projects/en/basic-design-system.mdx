@@ -1,0 +1,72 @@
+---
+title: Basic Design System
+description: "A brutalist component library in plain CSS, shipped over a CDN: one link tag and it works with plain HTML or any framework."
+type: learning
+category: library
+date: 2026-07-01
+order: 6
+draft: true
+preview:
+  publicId: portfolio/projects/basic-design-system/hero
+  alt: Library homepage with the Less is the system headline and sample components
+  width: 1920
+  height: 1080
+stack:
+  - name: CSS
+  - name: HTML
+  - name: BEM
+  - name: jsDelivr
+  - name: GitHub
+    logo: github
+  - name: Vercel
+links:
+  live: https://basic-design-system.vercel.app/
+  repository: https://github.com/DavidMarioLC/basic-design-system
+---
+
+## Snapshot
+
+- **Goal** — find out whether a component library can ship with no build step, no npm package and no framework: a single CSS file served from a CDN and consumed from plain HTML.
+- **Scope** — 14 components in one `styles.css`: button, radio, checkbox, input, slider, select, avatar, badge, accordion, table, spinner, alert, card and modal. Deliberately out of scope: theme variants, dark mode and any JavaScript in the library.
+- **What I verified** — it works from a single `<link>` to jsDelivr: **15.7 KB** of CSS, **2.5 KB** gzipped, zero build steps in the consuming project.
+
+## Why this project
+
+I wanted to understand how these libraries are built and, more than that, how they're distributed — the part you never see when you just install one. Plain CSS was the point: it takes the bundler out of the way and leaves the actual problem exposed — class names, tokens, and how the file reaches someone else's browser. Brutalism was the point too: no shadows, gradients or curves to hide behind, so a badly structured component shows.
+
+## Key decisions
+
+- **Ship straight from the repository via jsDelivr instead of publishing to npm** — I wanted the shortest path between a commit and someone using it: one `<link>`, nothing to install. The tradeoff: no real versioning — the URL points at `@main`, so anyone linking it gets whatever is on the branch rather than a version they chose.
+- **Name everything with BEM** — with no build step and no scoping, isolation between components either comes from the naming convention or it doesn't come at all. The tradeoff: long, verbose class names in the consumer's HTML, which is the price of having no CSS Modules and no utilities.
+- **Tokens as custom properties, one single theme** — 39 variables in `:root` hold color, typography and spacing, so changing the system means editing that block instead of 14 components. The tradeoff: the system has exactly one look — with no variants, theming is replacing values, not choosing between options.
+
+## What I learned
+
+- Distribution is a design decision, not a final chore. Serving from `@main` makes publishing trivial and updating dangerous: the consumer has no way to stay on the version they tested. Tagging releases isn't bureaucracy — it's what makes the library usable by someone who isn't you.
+- One single file was the right call for learning and the wrong one for consuming: someone who only wants the button downloads all 14 components, because without a build there's no way to import a part. At 2.5 KB gzipped it doesn't hurt, but it's a ceiling — the approach doesn't scale to a large system.
+- Tokens buy consistency, not variation. With 39 variables the system looks coherent, but each component still has exactly one form: variants have to be designed, and that's system work, not CSS work.
+
+## What I'd do differently
+
+- Publish tagged releases and link to a pinned version instead of `@main`, so updating becomes the consumer's decision.
+- Add dark mode. With the tokens already centralized it's mostly a matter of redefining the color block — and it's the real test of whether the token layer earns its keep.
+
+## Evidence
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/basic-design-system/gallery-1"
+    alt="Component catalog: button, radio, checkbox, input, slider, select, avatar, badge, accordion and more"
+    width={1920}
+    height={1080}
+    caption="Every component is shown with its states, disabled included: with no JavaScript, the only state that exists is what HTML already knows how to express."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/basic-design-system/gallery-2"
+    alt="Composed examples: pricing table, FAQ, sign-up form, profile card and notifications"
+    width={1920}
+    height={1080}
+    caption="The proof that a system works isn't the catalog, it's this: pieces assembled together without writing any new CSS."
+  />
+</Gallery>

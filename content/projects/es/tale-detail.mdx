@@ -1,0 +1,71 @@
+---
+title: Tale Detail
+description: "Landing page de una consultora de diseño y representación arquitectónica: su primer sitio propio, con el contenido en manos del cliente."
+type: real
+category: landing-page
+date: 2025-01-01
+order: 5
+draft: true
+preview:
+  publicId: portfolio/projects/tale-detail/hero
+  alt: Portada con una ilustración arquitectónica a ancho completo y el llamado a contacto
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: TypeScript
+    logo: typescript
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: shadcn/ui
+    logo: shadcn
+  - name: Sanity
+    logo: sanity
+  - name: Motion
+  - name: Vercel
+links:
+  live: https://www.taledetail.design/
+---
+
+## Snapshot
+
+- **Rol** — Frontend Developer: construí la landing completa, configuré el CMS y desplegué el sitio.
+- **Alcance** — Landing de una página para una consultora de diseño y representación arquitectónica: quiénes son, metodología, servicios, proyectos y contacto.
+- **Resultado** — Lighthouse 97 en performance, 96 en accesibilidad, 100 en best practices y 100 en SEO.
+
+## El problema
+
+Tale Detail es una consultora que traduce datos urbanos y proyectos complejos en material visual con el que sus clientes ganan licitaciones y concursos. No tenían sitio: un estudio cuyo trabajo es la representación visual no tenía dónde mostrarla, y cada conversación con un cliente nuevo arrancaba sin nada a lo que apuntar.
+
+## Decisiones clave
+
+- **Sanity como CMS, con el esquema modelado a la medida de la landing** — el cliente pidió algo sencillo y de curva de aprendizaje baja para subir y ajustar su contenido sin depender de mí. A cambio, un sitio de una sola página arrastra un servicio más que mantener, y su contenido queda repartido en documentos en vez de vivir en el repositorio.
+- **Animar las secciones con Motion** — el producto de la consultora es visual, así que la landing tenía que sostener esa expectativa mientras se recorre. A cambio, más JavaScript en el cliente en un sitio que ya carga imágenes grandes: fue lo que hubo que vigilar para que el performance no se cayera.
+- **Una sola página con navegación por anclas** — el recorrido es una presentación de la consultora, no un catálogo: interesa que se lea seguido hasta el formulario. A cambio, ningún servicio ni proyecto tiene URL propia para compartirse suelto o posicionarse por su cuenta.
+
+## Resultado
+
+- Lighthouse en producción: **97** performance, **96** accesibilidad, **100** best practices, **100** SEO.
+- Es el primer sitio propio de la consultora: antes no tenían dónde mostrar su trabajo.
+- El cliente publica y ajusta el contenido desde Sanity, sin pasar por un desarrollador.
+
+## Galería
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/tale-detail/gallery-1"
+    alt="Sección Quiénes Somos con el texto de presentación y el logo de la consultora"
+    width={1920}
+    height={1080}
+    caption="La presentación es lo primero que se lee después del hero: define a la consultora antes de nombrar un solo servicio."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/tale-detail/gallery-2"
+    alt="Formulario de contacto que pregunta por el perfil profesional y el interés del visitante"
+    width={1920}
+    height={1080}
+    caption="El formulario pregunta el perfil —estudiante, arquitecto independiente, estudio— y el interés, así que el contacto llega ya clasificado en vez de como un mensaje suelto."
+  />
+</Gallery>

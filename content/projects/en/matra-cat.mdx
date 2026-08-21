@@ -1,0 +1,72 @@
+---
+title: MATRA - CAT
+description: "Corporate site for MATRA - CAT in Costa Rica: heavy machinery sales and rentals, maintenance, financing and technical advisory."
+type: real
+category: website
+date: 2025-04-01
+order: 2
+featured: true
+draft: true
+preview:
+  publicId: portfolio/projects/matra/hero
+  alt: Homepage leading with MATRA's 75th anniversary message and the brands it distributes
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: WordPress
+    logo: wordpress
+  - name: Motion
+  - name: Google Analytics
+links:
+  live: https://www.matra.co.cr/
+---
+
+## Snapshot
+
+- **Role** — Frontend Developer: I built the whole site, from markup to deployment and the CMS integration.
+- **Scope** — The company's public site: equipment for sale and rent, parts, promotions, branch locations and the maintenance, financing and technical advisory lines.
+- **Outcome** — Lighthouse scores of 97 performance, 96 accessibility, 100 best practices and 100 SEO.
+
+## The problem
+
+MATRA - CAT sells and rents heavy machinery, but their previous site was slow and looked a decade old. For someone landing on it to price an excavator or a rental plan, that site was the company's first impression — and it helped neither with finding the equipment nor with getting in touch.
+
+## Key decisions
+
+- **Rebuild the site in Next.js with ISR** — the content changes rarely, but it has to change without waiting on a developer, so every page is served statically and regenerated on demand. The tradeoff: you have to reason about caching, and an edit isn't live until the page revalidates.
+- **Trigger revalidation with a webhook from the CMS** — rather than letting fresh content wait for the ISR window to expire, WordPress pings the site whenever something is published. The tradeoff: the site is now coupled to the CMS, and the endpoint and its secret need maintaining — if the webhook fails, it fails silently until the next time-based revalidation.
+- **Keep WordPress as a headless CMS** — the team already knew how to publish there, and switching tools would have meant retraining them on top of a launch. The tradeoff: the site inherits a content model that was never designed to be consumed over an API, and the frontend carries that shape.
+- **Use Motion for the animations** — the site needed to feel like a considered product, not a showcase of effects. The tradeoff: more JavaScript on the client, which was the heaviest cost to weigh against the performance score.
+
+## Outcome
+
+- Lighthouse in production: **97** performance, **96** accessibility, **100** best practices, **100** SEO.
+- MATRA's team publishes and edits in WordPress and the change reaches the site with no redeploy — the webhook revalidates the affected page.
+
+## What I'd do differently
+
+- I'd swap WordPress for Strapi. WordPress won on continuity for the editors, but modeling the machinery catalog in an API-first CMS would have saved reshaping the content in the frontend.
+
+## Gallery
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/matra/gallery-1"
+    alt="Branch locator listing offices by province next to a map of Costa Rica"
+    width={1920}
+    height={1080}
+    caption="Branches come from the CMS: every address opens in Waze and every number in WhatsApp, which is how customers actually get in touch."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/matra/gallery-2"
+    alt="Promotions section with two offer cards and their request button"
+    width={1920}
+    height={1080}
+    caption="Promotions expire and rotate often — this is the section that justified the revalidation webhook, because it can't wait for a deploy."
+  />
+</Gallery>

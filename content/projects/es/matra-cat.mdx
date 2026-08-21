@@ -1,0 +1,72 @@
+---
+title: MATRA - CAT
+description: "Sitio corporativo de MATRA - CAT en Costa Rica: venta y renta de maquinaria pesada, mantenimiento, financiamiento y asesoría técnica."
+type: real
+category: website
+date: 2025-04-01
+order: 2
+featured: true
+draft: true
+preview:
+  publicId: portfolio/projects/matra/hero
+  alt: Portada del sitio con el mensaje de los 75 años de MATRA y las marcas que distribuye
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: WordPress
+    logo: wordpress
+  - name: Motion
+  - name: Google Analytics
+links:
+  live: https://www.matra.co.cr/
+---
+
+## Snapshot
+
+- **Rol** — Frontend Developer: construí el sitio completo, desde el maquetado hasta el despliegue y la integración con el CMS.
+- **Alcance** — Sitio público de la empresa: equipo en venta y renta, repuestos, promociones, sucursales y las líneas de mantenimiento, financiamiento y asesoría técnica.
+- **Resultado** — Lighthouse 97 en performance, 96 en accesibilidad, 100 en best practices y 100 en SEO.
+
+## El problema
+
+MATRA - CAT vende y renta maquinaria pesada, pero su sitio anterior cargaba lento y tenía un diseño de otra época. Para un cliente que llega buscando una excavadora o un plan de renta, ese sitio era el primer contacto con la empresa — y no ayudaba ni a encontrar el equipo ni a dar el paso de contactar.
+
+## Decisiones clave
+
+- **Reconstruir el sitio en Next.js con renderizado ISR** — el contenido cambia poco pero tiene que poder cambiar sin esperar a un desarrollador, así que cada página se sirve estática y se regenera bajo demanda. A cambio, hay que razonar sobre caché y aceptar que una edición no aparece hasta que la página se revalida.
+- **Disparar la revalidación con un webhook desde el CMS** — en lugar de dejar que el contenido nuevo esperara a que expirara el ISR, WordPress avisa al sitio cuando algo se publica. A cambio, el sitio queda acoplado al CMS y hay que mantener el endpoint y su secreto: si el webhook falla, el fallo es silencioso hasta la siguiente revalidación por tiempo.
+- **Mantener WordPress como headless CMS** — el equipo ya sabía publicar ahí y cambiar de herramienta habría significado reentrenarlos junto con el lanzamiento. A cambio, hereda un modelo de contenido que no se diseñó para consumirse por API, y el front carga con esa forma.
+- **Usar Motion para las animaciones** — el sitio necesitaba sensación de producto cuidado, no una galería de efectos. A cambio, más JavaScript en el cliente: fue el trade-off que más pesó al perseguir el puntaje de performance.
+
+## Resultado
+
+- Lighthouse en producción: **97** performance, **96** accesibilidad, **100** best practices, **100** SEO.
+- El equipo de MATRA publica y edita desde WordPress y el cambio llega al sitio sin redeploy: el webhook revalida la página afectada.
+
+## Qué haría distinto
+
+- Cambiaría WordPress por Strapi. WordPress se eligió por continuidad para los editores, pero modelar el catálogo de maquinaria en un CMS pensado para API habría evitado adaptar la forma del contenido en el front.
+
+## Galería
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/matra/gallery-1"
+    alt="Sección de sucursales con el listado por provincia y un mapa de Costa Rica"
+    width={1920}
+    height={1080}
+    caption="Las sucursales salen del CMS: cada dirección abre en Waze y cada teléfono en WhatsApp, que es como el cliente contacta de verdad."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/matra/gallery-2"
+    alt="Sección de promociones con dos tarjetas y su botón de solicitud"
+    width={1920}
+    height={1080}
+    caption="Las promociones caducan y cambian seguido: es la sección que justificó el webhook de revalidación, porque no puede esperar a un despliegue."
+  />
+</Gallery>

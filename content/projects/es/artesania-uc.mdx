@@ -1,0 +1,42 @@
+---
+title: Artesanía UC
+description: "Sitio del Programa de Artesanía UC: páginas nuevas construidas con el design system y la librería de componentes de la Universidad Católica de Chile."
+type: real
+category: website
+date: 2023-01-01
+order: 4
+draft: true
+preview:
+  publicId: portfolio/projects/artesania-uc/hero
+  alt: Portada del Programa de Artesanía UC con una exposición de cerámica en el destacado
+  width: 1920
+  height: 1080
+stack:
+  - name: WordPress
+    logo: wordpress
+  - name: JavaScript
+  - name: CSS
+  - name: Google Analytics
+links:
+  live: https://artesania.uc.cl/
+---
+
+## Snapshot
+
+- **Rol** — Frontend Engineer: construí las páginas nuevas del sitio.
+- **Alcance** — Sitio público del Programa de Artesanía de la Escuela de Diseño UC, dentro del ecosistema web de la universidad.
+- **Resultado** — Lighthouse 100 en performance, 99 en accesibilidad, 100 en best practices y 100 en SEO.
+
+## El problema
+
+El sitio del programa ya existía y necesitaba páginas nuevas. El riesgo no era técnico sino de identidad: cada página añadida por fuera del lenguaje visual de la UC se lee como un sitio ajeno pegado dentro del de la universidad, y el visitante lo nota aunque no sepa nombrarlo.
+
+## Decisiones clave
+
+- **Construir cada página nueva con el UI kit y el design system de la UC** — la universidad ya tenía resueltos tipografía, color y componentes, y respetarlos era lo que mantenía las páginas nuevas dentro del sitio y no al lado. A cambio, se renuncia a resolver el diseño a criterio propio: cuando el kit no tenía un componente para algo, la salida era componer con lo que había, no inventar uno nuevo.
+- **Sumar al WordPress existente en vez de introducir un stack nuevo** — el sitio estaba en marcha y con contenido vivo; migrarlo no era el encargo. A cambio, el front se escribe en CSS y JavaScript sin build ni sistema de componentes, así que la consistencia depende de disciplina y no de la herramienta.
+
+## Resultado
+
+- Lighthouse en producción: **100** performance, **99** accesibilidad, **100** best practices, **100** SEO.
+- Las páginas nuevas son indistinguibles del resto del sitio de la UC: mismos componentes, misma tipografía, misma navegación.

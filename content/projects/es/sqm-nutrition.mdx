@@ -1,0 +1,72 @@
+---
+title: SQM Nutrition
+description: "Sitio global de SQM Nutrition, fertilizantes especiales para cultivos, publicado en tres idiomas y más de treinta mercados."
+type: real
+category: website
+date: 2025-03-01
+order: 3
+featured: true
+draft: true
+preview:
+  publicId: portfolio/projects/sqm/hero
+  alt: Portada del sitio con un cultivo visto desde el aire y el selector de mercado en la cabecera
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: WordPress
+    logo: wordpress
+  - name: next-intl
+  - name: Google Analytics
+links:
+  live: https://www.sqmnutrition.com/
+---
+
+## Snapshot
+
+- **Rol** — Frontend Engineer: construí el sitio completo sobre WordPress headless.
+- **Alcance** — Sitio global de producto: inglés, español y portugués, con más de treinta variantes de país y región.
+- **Resultado** — Lighthouse 98 en performance, 95 en accesibilidad, 100 en best practices y 100 en SEO, con la carga por debajo de 2,5 s.
+
+## El problema
+
+SQM Nutrition vende fertilizantes especiales para cultivos y su sitio anterior corría entero sobre WordPress: lento y con un aspecto que no acompañaba al producto. En un sitio que le habla al mismo tiempo a mercados de tres idiomas, esa lentitud no es un detalle — es el primer filtro que pierde al visitante antes de que llegue al catálogo.
+
+## Decisiones clave
+
+- **Separar el frontend de WordPress y dejarlo solo como CMS headless** — la alternativa era seguir estirando el WordPress existente, y ahí el techo de rendimiento estaba puesto por el tema y los plugins. A cambio, se tiró todo el frontend que ya existía y hubo que reconstruirlo desde cero: fue el costo más alto del proyecto y aun así salió a cuenta.
+- **Resolver el multi-idioma con next-intl y el locale en la URL** — cada mercado necesita su propia dirección para ser indexable por separado, no una detección por navegador. A cambio, cada página del sitio existe en tantas variantes como mercados hay, así que cualquier ruta nueva se multiplica.
+- **Manejar todos los textos desde el CMS** — la idea era que los equipos de cada mercado pudieran ajustar su copia sin pasar por un desarrollador. A cambio, incluso los textos de interfaz que nadie iba a tocar quedaron dependiendo del CMS.
+
+## Resultado
+
+- Lighthouse en producción: **98** performance, **95** accesibilidad, **100** best practices, **100** SEO.
+- La carga quedó por debajo de **2,5 s**, frente a un sitio anterior en el que la lentitud era la queja principal.
+- Una sola base de código sirve inglés, español y portugués en más de treinta variantes de país y región.
+
+## Qué haría distinto
+
+- Dividiría los textos en dos: al CMS solo los que tiene sentido que el cliente cambie, y al proyecto —en un diccionario— los de interfaz que iban a quedarse fijos. Llevar todo al CMS hizo que cadenas que nunca cambian arrastraran el mismo peso de traducción y mantenimiento que el contenido real.
+
+## Galería
+
+<Gallery>
+  <PostImage
+    publicId="portfolio/projects/sqm/gallery-2"
+    alt="Listado de productos de la gama Ultrasol con un panel de filtros"
+    width={1920}
+    height={1080}
+    caption="El listado filtra por tipo de aplicación, solución nutricional y línea: es la forma en que un agrónomo llega al producto, no el menú."
+  />
+
+  <PostImage
+    publicId="portfolio/projects/sqm/gallery-1"
+    alt="Ficha de un fertilizante con pestañas de descripción, especificaciones y material descargable"
+    width={1920}
+    height={1080}
+    caption="La ficha separa en pestañas la descripción, las especificaciones técnicas y las descargas: todo ese contenido viene del CMS y cambia por mercado."
+  />
+</Gallery>
