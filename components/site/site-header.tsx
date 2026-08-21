@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { LocaleSwitcher } from "@/components/site/locale-switcher";
+import { MobileNav } from "@/components/site/mobile-nav";
 import { NavLink } from "@/components/site/nav-link";
 
 const SECTIONS = [
@@ -22,7 +23,8 @@ export async function SiteHeader() {
         {t("skipToContent")}
       </a>
       <div className="mx-auto flex w-full max-w-content flex-wrap items-center justify-between gap-x-4 gap-y-3 px-6 py-4">
-        <nav aria-label={t("primary")}>
+        {/* Below `md` the same sections live inside the sheet instead. */}
+        <nav aria-label={t("primary")} className="hidden md:block">
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-sm">
             {SECTIONS.map((section) => (
               <li key={section.key}>
@@ -31,6 +33,18 @@ export async function SiteHeader() {
             ))}
           </ul>
         </nav>
+        <div className="md:hidden">
+          <MobileNav
+            closeLabel={t("closeMenu")}
+            navLabel={t("primary")}
+            openLabel={t("openMenu")}
+            sections={SECTIONS.map((section) => ({
+              href: section.href,
+              label: t(section.key),
+            }))}
+            title={t("menu")}
+          />
+        </div>
         <LocaleSwitcher />
       </div>
     </header>

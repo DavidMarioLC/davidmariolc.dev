@@ -6,7 +6,10 @@
     "setup": "Setup",
     "posts": "Posts",
     "skipToContent": "Saltar al contenido",
-    "primary": "Principal"
+    "primary": "Principal",
+    "menu": "Menú",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
   },
   "language": {
     "label": "Idioma",
