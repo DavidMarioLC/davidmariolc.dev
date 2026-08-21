@@ -38,21 +38,15 @@ Every business unit built its own agents in n8n, its own way. Nobody had the ful
 
 ## Key decisions
 
-- **shadcn/ui instead of building the component system** — the idea had to be seen working before it could be argued about, and with the components already solved the interface moved at the speed of the product. The tradeoff: `TODO: what it cost — a generic-looking UI, components rewritten as it grew, inherited theming or accessibility decisions?`
-- **Supabase because the company already paid for it** — availability, not a technical fit: using what was already there skipped an infrastructure debate that would have delayed the MVP. The tradeoff: `TODO: what it actually limited — auth, RLS, connection limits, region`.
-- **n8n's REST API instead of reimplementing agent execution** — the team already lived in n8n and knew how to build there; reimplementing that layer would have meant teaching them another tool on top of maintaining it. The tradeoff: the platform is tied to n8n and to how each unit wired its own workflow: `TODO: what hurts about that dependency — latency, responses without streaming, failures in workflows you don't own`.
+- **shadcn/ui instead of building the component system** — the idea had to be seen working before it could be argued about, and with the components already solved the interface moved at the speed of the product.
+- **Supabase because the company already paid for it** — availability, not a technical fit: using what was already there skipped an infrastructure debate that would have delayed the MVP.
+- **n8n's REST API instead of reimplementing agent execution** — the team already lived in n8n and knew how to build there; reimplementing that layer would have meant teaching them another tool on top of maintaining it. The tradeoff: the platform is tied to n8n and to how each unit wired its own workflow.
 - **No mobile in the MVP** — validating the idea with real users came first. The tradeoff: the platform was born desktop-only.
 
 ## Outcome
 
 - 50+ business units with their agents centralized, 80+ agents inventoried, and 100+ people using them through the platform.
 - Still under active development: the MVP didn't close the project, it opened it.
-- `TODO: how long it took to find and use an agent before (ask on Slack, get someone to run it in n8n) versus now.`
-- `TODO: how many duplicate or unknown agents surfaced once everything was inventoried — the easiest number to pull.`
-
-## What I'd do differently
-
-- `TODO: is mobile still missing? If so, this is the bullet: the debt taken on to reach the MVP that still shapes how the platform gets used.`
 
 ## Gallery
 
