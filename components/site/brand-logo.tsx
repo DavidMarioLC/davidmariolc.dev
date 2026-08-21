@@ -9,9 +9,17 @@ import { cn } from "@/lib/utils";
 export function BrandLogo({
   name,
   className,
+  mono = false,
 }: {
   name?: string;
   className?: string;
+  /**
+   * Drops the brand colors so the mark inherits the surrounding text color.
+   * Use it where the logo is a bullet next to a label rather than the subject
+   * — and only for marks whose file is a transparent silhouette, since a logo
+   * with an opaque background flattens into a solid block.
+   */
+  mono?: boolean;
 }) {
   const logo = resolveLogo(name);
 
@@ -20,6 +28,23 @@ export function BrandLogo({
   }
 
   if (logo.kind === "image") {
+    // A file-backed mark has no markup to recolor, so its alpha channel becomes
+    // a mask over a `currentColor` fill instead.
+    if (mono) {
+      return (
+        <span
+          aria-hidden="true"
+          className={cn("inline-block bg-current", className)}
+          style={{
+            maskImage: `url(${logo.entry.src})`,
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "contain",
+          }}
+        />
+      );
+    }
+
     return (
       <Image
         alt=""
@@ -33,5 +58,10 @@ export function BrandLogo({
 
   const Svg = logo.entry;
 
-  return <Svg aria-hidden="true" className={className} />;
+  return (
+    <Svg
+      aria-hidden="true"
+      className={cn(mono && "[&_*]:fill-current", className)}
+    />
+  );
 }
