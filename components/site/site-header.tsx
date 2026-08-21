@@ -14,7 +14,7 @@ export async function SiteHeader() {
   const t = await getTranslations("nav");
 
   return (
-    <header className="border-border border-b">
+    <header className="sticky top-0 z-50 border-border border-b bg-background/70 backdrop-blur-md">
       <a
         className="sr-only focus:not-sr-only focus:absolute focus:m-2 focus:rounded focus:bg-card focus:px-3 focus:py-2"
         href="#content"
