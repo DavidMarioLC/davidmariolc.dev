@@ -1,8 +1,14 @@
 import { ArrowUpRight } from "lucide-react";
 import type { CloudImageSource } from "@/components/site/cloud-image";
 import { CloudImage } from "@/components/site/cloud-image";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 
 interface Props {
   logo: CloudImageSource;
@@ -12,46 +18,37 @@ interface Props {
   year: number;
 }
 
-function Body({ name, participation, year, logo, url }: Props) {
+export function AchievementRow({
+  name,
+  participation,
+  year,
+  logo,
+  url,
+}: Props) {
   return (
-    <>
-      <CloudImage className="size-12 rounded-sm" image={logo} sizes="48px" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-sm">{name}</p>
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+    <Item
+      className="rounded-md bg-card"
+      render={
+        url ? (
+          // biome-ignore lint/a11y/useAnchorContent: Item passes its children into the rendered anchor.
+          <a href={url} rel="noopener noreferrer" target="_blank" />
+        ) : undefined
+      }
+      variant="outline"
+    >
+      <ItemMedia className="size-12 rounded-sm" variant="image">
+        <CloudImage className="size-12 rounded-sm" image={logo} sizes="48px" />
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>{name}</ItemTitle>
+        <ItemDescription className="text-xs uppercase tracking-wide">
           {participation}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2 text-muted-foreground text-sm">
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions className="text-muted-foreground text-sm">
         <span>{year}</span>
         {url ? <ArrowUpRight aria-hidden="true" className="size-4" /> : null}
-      </div>
-    </>
-  );
-}
-
-export function AchievementRow(props: Props) {
-  const shared = "flex flex-row items-center gap-4 rounded-md p-4";
-
-  // Card renders a div and takes no render prop, so the anchor wraps it.
-  if (props.url) {
-    return (
-      <a
-        className="block rounded-md"
-        href={props.url}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        <Card className={cn(shared, "transition-colors hover:bg-accent")}>
-          <Body {...props} />
-        </Card>
-      </a>
-    );
-  }
-
-  return (
-    <Card className={shared}>
-      <Body {...props} />
-    </Card>
+      </ItemActions>
+    </Item>
   );
 }
