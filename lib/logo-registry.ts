@@ -31,13 +31,13 @@ import { Spring } from "@/components/ui/svgs/spring";
 import { Strapi } from "@/components/ui/svgs/strapi";
 import { Supabase } from "@/components/ui/svgs/supabase";
 import { Tailwindcss } from "@/components/ui/svgs/tailwindcss";
-import { Twitter } from "@/components/ui/svgs/twitter";
 import { Typescript } from "@/components/ui/svgs/typescript";
 import { Vitest } from "@/components/ui/svgs/vitest";
 import { Vscode } from "@/components/ui/svgs/vscode";
 import { Vue } from "@/components/ui/svgs/vue";
 import { Warp } from "@/components/ui/svgs/warp";
 import { Wordpress } from "@/components/ui/svgs/wordpress";
+import { XDark } from "@/components/ui/svgs/xDark";
 
 type Svg = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -83,7 +83,7 @@ const LOGOS = {
   vue: Vue,
   warp: Warp,
   wordpress: Wordpress,
-  x: Twitter,
+  x: XDark,
 } as const satisfies Record<string, Svg>;
 
 export type LogoName = keyof typeof LOGOS;
