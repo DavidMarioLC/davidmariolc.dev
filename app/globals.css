@@ -74,6 +74,11 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
+  /* The three runs of a JWT. Not part of the site palette: they only exist
+     inside .token-anatomy, where the token is the subject rather than chrome. */
+  --token-header: oklch(0.74 0.17 5);
+  --token-payload: oklch(0.72 0.19 310);
+  --token-signature: oklch(0.78 0.13 225);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -595,6 +600,123 @@
   }
   .concept-animation-skeleton {
     @apply my-8 flex items-center justify-center rounded-md border border-border border-dashed bg-card;
+  }
+
+  /* --- Token anatomy --- */
+
+  .token-anatomy {
+    @apply my-8 overflow-hidden rounded-md border border-border bg-card;
+  }
+  .token-anatomy-title {
+    @apply border-border border-b px-4 py-3 font-heading text-foreground text-sm;
+  }
+  .token-anatomy-stage {
+    @apply px-4 py-4;
+  }
+  /* The token keeps reading as one string: the runs are buttons, but they sit
+     inline with the dots between them and carry no button chrome of their own. */
+  .token-anatomy-token {
+    @apply break-all font-mono text-sm leading-relaxed;
+  }
+  .token-anatomy-dot {
+    @apply text-muted-foreground;
+  }
+  .token-anatomy-run {
+    @apply cursor-pointer break-all rounded-xs underline decoration-dotted underline-offset-4 transition-opacity;
+  }
+  .token-anatomy-run:hover {
+    @apply decoration-solid;
+  }
+  .token-anatomy-run:hover,
+  .token-anatomy-run[data-open="true"] {
+    @apply decoration-solid;
+  }
+  /* Dimming the runs that are not open is what makes the open one read as
+     selected, without moving anything on the line. */
+  .token-anatomy-token:has(.token-anatomy-run[data-open="true"])
+  .token-anatomy-run[data-open="false"] {
+    @apply opacity-40;
+  }
+  .token-anatomy-run:focus-visible {
+    @apply outline-2 outline-ring outline-offset-2;
+  }
+  /* Three colours in a monochrome site, on purpose: this block is a specimen,
+     not chrome. A code block is syntax-coloured for the same reason. The hues
+     follow the convention jwt.io made familiar — header, payload, signature —
+     lifted in lightness to hold up on the card's ground. */
+  .token-anatomy-run[data-segment="header"],
+  .token-anatomy-panel-label[data-segment="header"] {
+    color: var(--token-header);
+  }
+  .token-anatomy-run[data-segment="payload"],
+  .token-anatomy-panel-label[data-segment="payload"] {
+    color: var(--token-payload);
+  }
+  .token-anatomy-run[data-segment="signature"],
+  .token-anatomy-panel-label[data-segment="signature"] {
+    color: var(--token-signature);
+  }
+  /* Each run keeps its own colour when open; the state reads from the solid
+     underline and from the others stepping back. */
+  .token-anatomy-run[data-open="true"] {
+    @apply decoration-solid;
+  }
+  /* 0fr → 1fr animates a height the component never measures, so the JSON keeps
+     its own line breaks and the panel still collapses to nothing. */
+  .token-anatomy-panel {
+    @apply grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out;
+  }
+  .token-anatomy-panel[data-open="true"] {
+    @apply grid-rows-[1fr];
+  }
+  .token-anatomy-panel-inner {
+    @apply overflow-hidden;
+  }
+  .token-anatomy-panel[data-open="true"] .token-anatomy-panel-inner {
+    @apply mt-4;
+  }
+  .token-anatomy-panel-label {
+    @apply font-mono text-xs uppercase tracking-wide;
+  }
+  /* The site's code blocks get their horizontal room from the `[data-line]`
+     wrappers rehype adds, and this `pre` has none: plain text sits flush
+     against the frame unless the padding is declared here. `px-4` is the same
+     gutter those wrappers use. */
+  .token-anatomy-json {
+    @apply mt-2 overflow-x-auto px-4 font-mono text-foreground text-sm;
+  }
+  .token-anatomy-note {
+    @apply mt-2 text-muted-foreground text-sm;
+  }
+  .token-anatomy-hint,
+  .token-anatomy-empty {
+    @apply mt-4 text-muted-foreground text-sm;
+  }
+  .token-anatomy-footer {
+    @apply border-border border-t px-4 py-3;
+  }
+  .token-anatomy-label {
+    @apply mb-2 block text-muted-foreground text-xs;
+  }
+  .token-anatomy-input {
+    @apply mb-3 w-full break-all rounded-sm border border-border bg-background p-2 font-mono text-foreground text-xs;
+  }
+  .token-anatomy-input:focus-visible {
+    @apply outline-2 outline-ring -outline-offset-2;
+  }
+  .token-anatomy-action {
+    @apply cursor-pointer text-muted-foreground text-sm underline decoration-dotted underline-offset-4 transition-colors;
+  }
+  .token-anatomy-action:hover {
+    @apply text-foreground;
+  }
+  .token-anatomy-action:focus-visible {
+    @apply outline-2 outline-ring outline-offset-2;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .token-anatomy-panel {
+      @apply transition-none;
+    }
   }
 
   /* --- Elements that appear rarely but must not fall back to browser defaults --- */

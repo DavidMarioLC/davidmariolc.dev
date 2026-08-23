@@ -257,5 +257,19 @@
     "homeTitle": "David Licla, Software Engineer",
     "homeDescription": "Software Engineer de Ica, Perú. Construyo productos con Next.js, TypeScript y Supabase, escribo sobre el oficio y ayudo a organizar la comunidad GDG Ica.",
     "ogAlt": "davidmariolc.dev"
+  },
+  "tokenAnatomy": {
+    "title": "Un JWT por dentro",
+    "hint": "Abre un tramo para verlo decodificado.",
+    "header": "cabecera",
+    "payload": "payload",
+    "signature": "firma",
+    "signatureNote": "Bytes, no texto. Sin el secreto del servidor no dicen nada, y por eso este tramo no se decodifica.",
+    "expiryLabel": "Caduca el",
+    "invalid": "Un JWT tiene tres tramos separados por puntos.",
+    "undecodable": "Este tramo no es base64url válido.",
+    "paste": "Probar con otro token",
+    "pasteLabel": "Token",
+    "reset": "Volver al de ejemplo"
   }
 }
