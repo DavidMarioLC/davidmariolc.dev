@@ -10,6 +10,7 @@ import { MdxLink } from "@/components/mdx/mdx-link";
 import { Playground } from "@/components/mdx/playground/playground";
 import { VanillaPlayground } from "@/components/mdx/playground/vanilla-playground";
 import { PostImage } from "@/components/mdx/post-image";
+import { TokenAnatomy } from "@/components/mdx/token-anatomy";
 
 /**
  * Markdown image syntax is a trap here: velite resolves its src against the
@@ -72,6 +73,7 @@ export const mdxComponents = {
   img: MdxImage,
   Playground,
   PostImage,
+  TokenAnatomy,
   table: Table,
   VanillaPlayground,
 };

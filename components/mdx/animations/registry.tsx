@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import type { ComponentType } from "react";
 
@@ -46,17 +47,27 @@ export function Skeleton() {
  * they travel in their own chunk. `ssr: false` is only legal inside a client
  * component, which is why this module is one — the same reason `Playground`
  * has a thin client wrapper.
- *
- * Empty right now: every animation there was belonged to a post that no longer
- * exists. Annotated rather than inferred so that stays legal — `keyof` an empty
- * inferred object is `never`, which makes the lookup in `ConceptAnimation`
- * unusable. An entry looks like this:
- *
- *   "model-router": dynamic(
- *     () => import("@/components/mdx/animations/model-router"),
- *     { loading: () => <Skeleton />, ssr: false }
- *   ),
  */
-export const animations: Record<string, ComponentType> = {};
+export const animations: Record<string, ComponentType> = {
+  "jwt-login": dynamic(() => import("@/components/mdx/animations/jwt-login"), {
+    loading: () => <Skeleton />,
+    ssr: false,
+  }),
+  "jwt-logout": dynamic(
+    () => import("@/components/mdx/animations/jwt-logout"),
+    {
+      loading: () => <Skeleton />,
+      ssr: false,
+    }
+  ),
+  "jwt-refresh": dynamic(
+    () => import("@/components/mdx/animations/jwt-refresh"),
+    { loading: () => <Skeleton />, ssr: false }
+  ),
+  "jwt-validation": dynamic(
+    () => import("@/components/mdx/animations/jwt-validation"),
+    { loading: () => <Skeleton />, ssr: false }
+  ),
+};
 
 export type AnimationId = keyof typeof animations;

@@ -154,7 +154,100 @@
     "loading": "Cargando la animación…",
     "scrollHint": "Diagrama desplazable"
   },
-  "animations": {},
+  "animations": {
+    "jwtLogin": {
+      "title": "Cómo unas credenciales se convierten en un token firmado",
+      "description": "Flujo de login: el navegador manda las credenciales, el servidor las verifica contra la tabla de usuarios, firma un token y deja de guardar nada.",
+      "steps": {
+        "credentials": "La contraseña sale del navegador una sola vez, en el login. A partir de aquí ya no vuelve a viajar.",
+        "verify": "El servidor compara lo que llega con el hash guardado. Es el único momento del patrón que toca la tabla de usuarios.",
+        "sign": "Con quién eres (sub) y hasta cuándo (exp), el servidor arma el payload y lo sella con su secreto. La firma no oculta nada: garantiza que nadie lo tocó.",
+        "deliver": "El token vuelve al navegador. Desde ahora, cualquiera que lo tenga es tú a ojos del servidor.",
+        "forget": "El servidor no guarda copia. Por eso puede validarlo después sin consultar nada… y por eso no puede apagarlo."
+      },
+      "nodes": {
+        "browser": "Navegador",
+        "browserMeta": "email + contraseña",
+        "server": "Servidor de auth",
+        "serverMeta": "verifica y firma",
+        "users": "Tabla de usuarios",
+        "usersMeta": "hash de la contraseña",
+        "token": "Token firmado",
+        "statelessBadge": "0 sesiones guardadas"
+      }
+    },
+    "jwtValidation": {
+      "title": "Qué hace el servidor con tu token en cada petición",
+      "description": "Validación de un JWT: partirlo en tres, recalcular la firma, comparar la expiración y responder sin tocar la base de datos.",
+      "steps": {
+        "arrive": "La petición trae el token en la cabecera Authorization. No hay cookie de sesión que buscar en ningún sitio.",
+        "split": "El token son tres partes separadas por puntos. Las dos primeras son base64, así que el payload lo lee cualquiera: no metas ahí nada secreto.",
+        "signature": "El servidor recalcula la firma con su secreto y la compara con la que trae el token. Si alguien tocó el payload, no cuadra y sale un 401.",
+        "expiry": "Después compara exp con su reloj. Un token caducado acaba en el mismo 401, aunque la firma sea perfecta.",
+        "serve": "Si las dos comprobaciones pasan, el sub del payload es la identidad y la petición se sirve.",
+        "stateless": "Nada de esto consultó la base de datos. Ahí está la ventaja para escalar, y la razón de que un token válido no se pueda desactivar."
+      },
+      "nodes": {
+        "request": "Petición",
+        "verify": "Validación",
+        "okMeta": "identidad = sub",
+        "reasonSignature": "firma que no cuadra",
+        "reasonExpiry": "o exp ya vencido",
+        "dbMeta": "sesiones: 0 consultas"
+      },
+      "checks": {
+        "formatMeta": "3 partes, base64url",
+        "signatureMeta": "se recalcula, no se lee",
+        "expiryMeta": "el reloj del servidor"
+      }
+    },
+    "jwtRefresh": {
+      "title": "Por qué hacen falta dos tokens y no uno",
+      "description": "Ciclo de refresco: el access token caduca, el cliente cambia el refresh token por un par nuevo y el viejo queda marcado como usado.",
+      "steps": {
+        "expired": "A los quince minutos el access token caduca y la petición normal vuelve con un 401. No se ha roto nada: estaba previsto.",
+        "ask": "El cliente no vuelve a pedirte la contraseña. Llama a /refresh con el refresh token, que viaja en una cookie que el JavaScript de la página no puede leer.",
+        "lookup": "Aquí sí hay una consulta. El refresh token está guardado en una tabla, y es la única pieza del patrón con estado.",
+        "rotate": "El servidor emite un par nuevo y marca el viejo como usado. Un refresh token vale exactamente una vez.",
+        "retry": "El cliente reintenta la petición original con el access nuevo y pasa. Tú no te enteraste de nada.",
+        "reuse": "Si el refresh ya usado reaparece, alguien tiene una copia. La respuesta es invalidar la familia entera y obligar a un login."
+      },
+      "nodes": {
+        "client": "Cliente",
+        "api": "API",
+        "api401": "401 · exp vencido",
+        "api200": "200 OK",
+        "authMeta": "rota el par",
+        "stateValid": "vigente",
+        "stateUsed": "usado",
+        "reuseBadge": "reuso → familia revocada",
+        "stateRevoked": "revocado"
+      }
+    },
+    "jwtLogout": {
+      "title": "Por qué cerrar sesión no apaga el token",
+      "description": "Logout con JWT: el cliente borra su token y el servidor borra el refresh, pero una copia del access token sigue pasando la validación hasta que caduca.",
+      "steps": {
+        "clear": "Cerrar sesión borra el token del navegador. Eso es todo lo que puede hacer el cliente: quitarlo de su lado.",
+        "revoke": "El refresh token sí se revoca, porque está guardado en una tabla. Borrarlo cierra la puerta a renovar la sesión.",
+        "copy": "Pero una copia del access token —en un log, en un proxy, en el portapapeles de alguien— sigue teniendo la firma correcta y un exp que no ha llegado. La API responde 200.",
+        "denylist": "La salida es una denylist: guardas el jti del token revocado hasta su exp, y la API la consulta antes de servir.",
+        "tradeoff": "Y ahí vuelve el estado que JWT quería evitar. Eliges: tokens cortos con una ventana de minutos, o revocación inmediata con una lectura por petición."
+      },
+      "nodes": {
+        "client": "Cliente",
+        "cleared": "token borrado del cliente",
+        "revoked": "revocado",
+        "copy": "Copia del access token",
+        "copyMeta": "en un log, en un proxy",
+        "api": "API",
+        "api200": "200 OK · sesión cerrada",
+        "api401": "401 · en la denylist",
+        "stateful": "1 lectura por petición",
+        "tradeoff": "ventana sin estado   vs   revocación inmediata"
+      }
+    }
+  },
   "challenge": {
     "reveal": "Ver respuesta"
   },
@@ -164,5 +257,19 @@
     "homeTitle": "David Licla, Software Engineer",
     "homeDescription": "Software Engineer de Ica, Perú. Construyo productos con Next.js, TypeScript y Supabase, escribo sobre el oficio y ayudo a organizar la comunidad GDG Ica.",
     "ogAlt": "davidmariolc.dev"
+  },
+  "tokenAnatomy": {
+    "title": "Un JWT por dentro",
+    "hint": "Abre un tramo para verlo decodificado.",
+    "header": "cabecera",
+    "payload": "payload",
+    "signature": "firma",
+    "signatureNote": "Bytes, no texto. Sin el secreto del servidor no dicen nada, y por eso este tramo no se decodifica.",
+    "expiryLabel": "Caduca el",
+    "invalid": "Un JWT tiene tres tramos separados por puntos.",
+    "undecodable": "Este tramo no es base64url válido.",
+    "paste": "Probar con otro token",
+    "pasteLabel": "Token",
+    "reset": "Volver al de ejemplo"
   }
 }
