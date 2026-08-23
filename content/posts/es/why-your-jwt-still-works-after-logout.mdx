@@ -44,7 +44,7 @@ Doscientos las dos veces. Si esperabas un 401, no estás solo: es lo que hace cu
 
 Con JWT (JSON Web Token: un objeto firmado que el cliente guarda y reenvía en cada petición) no hay fila que borrar. El servidor nunca guardó tu token. Y no se puede borrar lo que nunca se tuvo.
 
-## La intuición: la pulsera del festival
+## La pulsera del festival
 
 Hay dos formas de dejar entrar gente a un recinto.
 
@@ -52,30 +52,36 @@ La primera es la **lista**. En la puerta hay una tablet con los nombres; el de s
 
 La segunda es la **pulsera**. Enseñas el DNI una vez en taquilla, te ponen una pulsera con un sello imposible de imitar y a partir de ahí nadie vuelve a consultar nada: el de la puerta mira el sello, comprueba que la fecha impresa no ha pasado y te deja entrar. Es rapidísimo, funciona con veinte puertas y ninguna necesita hablar con taquilla.
 
-Eso es un JWT. Y la contrapartida es exactamente la que te acaba de morder: **si te expulsan del festival, la pulsera que llevas en la muñeca sigue siendo válida**. Nadie puede desactivarla a distancia, porque no está en ninguna lista. Solo caduca.
+Eso es un JWT. Y la contrapartida es exactamente la que te acaba de morder: **si te expulsan del festival, la pulsera que llevas en la muñeca sigue siendo válida**. Nada en el diseño básico permite desactivarla a distancia, porque no está en ninguna lista: caduca sola y ya. Al final del post veremos cuánto cuesta añadirle esa capacidad.
 
-Toda la parte incómoda de este patrón sale de ahí. Vamos a recorrerlo entero con esa imagen encima.
+Toda la parte incómoda del patrón sale de ahí. Recorrámoslo entero con esa imagen encima.
 
 ### Cómo te ponen la pulsera
 
+El login es el único momento en que la contraseña viaja. El servidor la compara con el hash que tiene guardado, arma un payload con quién eres (el claim `sub`) y hasta cuándo vale (el claim `exp`), lo sella con su secreto y devuelve el token:
+
 <ConceptAnimation id="jwt-login" />
 
-Lo importante del último paso: el servidor firma el token y lo suelta. No lo apunta en ningún sitio. Esa decisión es la que hace que el resto del patrón funcione como funciona.
+Lo importante es el último paso: el servidor firma el token y lo suelta sin guardar copia. Esa decisión —no apuntar nada— es la que le permite validar después sin consultar, y la que le impide revocar.
 
 ### Cómo la mira el de la puerta
 
+En cada petición el servidor hace tres cosas con el token que llega. Lo parte por los puntos en sus tres tramos —cabecera, payload y firma—, recalcula la firma con su secreto y la compara con la que trae, y mira si el `exp` del payload ya pasó. Si algo falla, 401:
+
 <ConceptAnimation id="jwt-validation" />
 
-Fíjate en lo que **no** hay en esa animación: una consulta a la base de datos. Un servidor que valida así aguanta cualquier tráfico y se puede replicar sin coordinación, porque cada réplica solo necesita el secreto.
+Fíjate en lo que **no** hubo: una consulta a la base de datos. Un servidor que valida así aguanta cualquier tráfico y se puede replicar sin coordinación, porque cada réplica solo necesita el secreto.
 
 <Callout type="warning" title="El payload no está cifrado">
-  Las dos primeras partes de un JWT son `base64url`, no criptografía. Pega
-  cualquier token en `atob()` y verás el contenido. La firma garantiza que
-  nadie lo **modificó**, no que nadie lo **lea**. Nunca metas ahí un correo
-  interno, un DNI ni nada que no publicarías.
+  Las dos primeras partes de un JWT son `base64url`, no criptografía. Copia
+  el tramo del medio (lo que va entre el primer y el segundo punto), cambia
+  los `-` por `+` y los `_` por `/`, y pásalo por `atob()`: ahí está tu payload
+  en claro. La firma garantiza que nadie lo **modificó**, no que nadie lo
+  **lea**. Nunca metas ahí un correo interno, un DNI ni nada que no
+  publicarías.
 </Callout>
 
-## El ejemplo, paso a paso
+## De la versión ingenua al par de tokens
 
 Firmar y verificar son cinco líneas. Esta es la versión ingenua, la que casi todo el mundo escribe primero:
 
@@ -85,7 +91,7 @@ export function issue(userId: string) {
 }
 ```
 
-Sin `exp`, la pulsera no lleva fecha impresa: vale para siempre. Un token filtrado hoy sigue abriendo la puerta el año que viene. La corrección mínima es ponerle caducidad:
+Sin fecha de caducidad la pulsera vale para siempre. Un token filtrado hoy sigue abriendo la puerta el año que viene. Esa fecha es el claim `exp`, y la librería lo escribe por ti si le pasas `expiresIn`:
 
 ```ts title="src/auth/tokens.ts"
 return jwt.sign({ sub: userId }, process.env.JWT_SECRET); // [!code --]
@@ -98,33 +104,54 @@ Y aquí aparece el problema obvio: quince minutos. Nadie va a volver a escribir 
 
 ### Por eso hay dos tokens
 
-La solución es separar los dos papeles que estabas mezclando. El **access token** es la pulsera del día: corto, sin estado, se enseña en cada puerta. El **refresh token** es el abono del festival: largo, guardado en una tabla del servidor y con un único uso, sirve para que te den la pulsera de mañana sin volver a taquilla con el DNI.
+La solución es separar los dos papeles que estabas mezclando. El **access token** es la pulsera del día: corto, sin estado, se enseña en cada puerta. El **refresh token** es el abono del festival: largo, con un único uso, guardado en una tabla del servidor y —del lado del cliente— en una cookie `httpOnly` que el JavaScript de la página no puede leer. Sirve para que te den la pulsera de mañana sin volver a taquilla con el DNI.
 
 <ConceptAnimation id="jwt-refresh" />
 
-En código, el refresh es lo contrario del access: se guarda, se busca y se marca.
+Cada login abre una **familia**: el refresh token que te dieron, el que salga de canjearlo, y así sucesivamente. Todos comparten un `familyId`, y esa es la unidad que se revoca — no el token suelto, y no el usuario entero, que puede tener otras sesiones legítimas abiertas.
+
+En código, el refresh token es lo contrario del access token: se guarda, se busca y se marca.
 
 ```ts title="src/auth/refresh.ts"
 const stored = await db.refreshTokens.findByHash(sha256(incoming));
 
-if (!stored || stored.usedAt) {
-  await db.refreshTokens.revokeFamily(stored?.familyId);
+if (!stored) {
   throw new AuthError("refresh inválido");
+}
+
+if (stored.usedAt) {
+  await db.refreshTokens.revokeFamily(stored.familyId);
+  throw new AuthError("refresh reutilizado");
 }
 
 await db.refreshTokens.markUsed(stored.id);
 return issuePair(stored.userId, stored.familyId);
 ```
 
-Ese `stored.usedAt` es la parte que se salta mucha gente. Si un refresh que ya se canjeó vuelve a aparecer, o el cliente tiene un bug o alguien está usando una copia robada. En los dos casos la respuesta correcta es la misma: tirar abajo la familia entera de tokens y obligar a un login.
+Ese `stored.usedAt` es la parte que se salta mucha gente. Si un refresh token que ya se canjeó vuelve a aparecer, o el cliente tiene un bug o alguien está usando una copia robada. En los dos casos la respuesta correcta es la misma: tirar abajo la familia entera de tokens y obligar a un login.
 
-### Y ahora sí: el logout
+### El logout: qué corta y qué no
 
-Con las dos piezas sobre la mesa, ya se ve por qué el `curl` del principio devolvía 200.
+Con las dos piezas sobre la mesa, ya se ve por qué el `curl` del principio devolvía 200. Cerrar sesión mueve tres cosas: el cliente borra su copia del access token, el servidor borra la fila del refresh token, y cualquier otra copia del access token —en un log, en un proxy, en el portapapeles de alguien— sigue teniendo la firma correcta y un `exp` que no ha llegado.
 
 <ConceptAnimation id="jwt-logout" />
 
-El resumen honesto: **el logout es completo en el refresh y parcial en el access**. Cortas la capacidad de renovar la sesión de inmediato, y dejas una ventana igual a lo que le quede de vida al access token. Con quince minutos de `expiresIn`, esa ventana son como mucho quince minutos.
+Y ahí está el fallo del `logout()` del principio: solo hacía la primera de las tres.
+
+```ts title="src/auth/logout.ts"
+export function logout() { // [!code --]
+export async function logout() { // [!code ++]
+  await api.post("/auth/logout"); // [!code ++]
+  localStorage.removeItem("access_token");
+  router.push("/login");
+}
+```
+
+El `removeItem` sigue haciendo falta, pero es lo secundario. Lo que corta la sesión de verdad es ese `POST`: borra del servidor la fila del refresh token. Sin él, el cliente olvida su token y el servidor sigue dispuesto a renovarlo para quien lo pida.
+
+El resumen honesto: **el logout es completo en el refresh token y parcial en el access token**. Cortas la capacidad de renovar la sesión de inmediato, y dejas una ventana igual a lo que le quede de vida al access token. Con quince minutos de `expiresIn`, esa ventana son como mucho quince minutos.
+
+Se puede cerrar esa ventana. Guardas el `jti` —el identificador único que lleva cada token— de los que revocas, y la API consulta esa lista antes de servir cada petición: es volver a poner una tablet en la puerta, con una lista mucho más corta que la original, solo las pulseras quemadas. Cuesta justo lo que JWT te había ahorrado, y por eso lo desmenuzo al final del post.
 
 <Callout type="tip" title="Elige el `expiresIn` mirando esa ventana">
   No lo elijas por comodidad: es literalmente cuánto tiempo sobrevive una
@@ -133,12 +160,14 @@ El resumen honesto: **el logout es completo en el refresh y parcial en el access
   token" sino "cuánto aguantas sin poder cortar".
 </Callout>
 
-## Ahora tú
+## ¿Cuándo deja de ser admin?
 
 El equipo mete el rol en el payload para no consultarlo en cada petición:
 
 ```ts title="src/auth/tokens.ts"
-jwt.sign({ sub: userId, role: "admin" }, secret, { expiresIn: "15m" });
+jwt.sign({ sub: userId, role: "admin" }, process.env.JWT_SECRET, {
+  expiresIn: "15m",
+});
 ```
 
 A las 10:00 le quitas el rol de admin a alguien en la base de datos. Su token lo emitiste a las 9:58. ¿Cuándo deja de ser admin?
@@ -153,23 +182,23 @@ A las 10:00 le quitas el rol de admin a alguien en la base de datos. Su token lo
 
   Es el mismo problema del logout, con otra ropa: **todo lo que metes en el
   payload es una copia con fecha de caducidad, no una lectura**. Sirve para lo
-  que cambia poco (`sub`, el `tenant`) y es una trampa para lo que cambia por
+  que cambia poco (el `sub`, el tenant) y es una trampa para lo que cambia por
   decisión de alguien, como permisos o el estado de la cuenta.
 </Challenge>
 
-## Para ir más profundo
+## Los detalles que muerden en producción
 
-**`alg: none` y la confusión de algoritmos.** El primer campo del token dice con qué algoritmo se firmó, y lo eligió quien te lo manda. La especificación llegó a contemplar `"alg": "none"`, un token sin firma que una librería descuidada aceptaba como válido. La variante moderna es peor: si tu servidor firma con RS256 (clave privada y pública) y alguien reenvía el token diciendo `HS256`, una implementación ingenua verificará el HMAC usando **la clave pública** —que es pública— como secreto. Por eso las librerías serias piden el algoritmo esperado como parámetro obligatorio de `verify`, y por eso nunca debes leerlo del propio token.
+**`alg: none` y la confusión de algoritmos.** La cabecera —el primer tramo del token— declara con qué algoritmo se firmó, y la eligió quien te lo manda. La especificación contempla, todavía hoy, `"alg": "none"`: un token sin firma que una librería descuidada acepta como válido. La variante moderna es peor: si tu servidor firma con RS256 (clave privada y pública) y alguien reenvía el token diciendo `HS256`, una implementación ingenua verificará el HMAC usando **la clave pública** —que es pública— como secreto. Por eso las librerías serias piden el algoritmo esperado como parámetro obligatorio de `verify`, y por eso nunca debes leerlo del propio token.
 
 **HS256 o RS256 no es una decisión de seguridad, es una de topología.** HS256 usa un único secreto compartido: quien puede verificar, puede firmar. Perfecto mientras el emisor y el verificador sean el mismo servicio. En cuanto tengas cinco servicios verificando tokens, HS256 significa cinco servicios capaces de emitir tokens de administrador. RS256 firma con la privada y verifica con la pública, así que puedes repartir la pública por todas partes sin repartir el poder de emitir.
 
-**Dónde guardar el access token.** `localStorage` es cómodo y lo lee cualquier script que se cuele en tu página; una cookie `httpOnly` no la lee el JavaScript pero viaja sola en cada petición, lo que abre la puerta al CSRF si no la acompañas de `SameSite=Lax` y de comprobar el origen. No hay opción sin coste. El consenso actual para una app web: refresh token en cookie `httpOnly` `Secure` `SameSite`, y access token en memoria de JavaScript —ni en `localStorage` ni en cookie—, aceptando que se pierda al recargar porque el refresh lo repone.
+**Dónde guardar el access token.** `localStorage` es cómodo y lo lee cualquier script que se cuele en tu página; una cookie `httpOnly` no la lee el JavaScript pero viaja sola en cada petición, lo que abre la puerta al CSRF si no la acompañas de `SameSite=Lax` y de comprobar el origen. No hay opción sin coste. El consenso actual para una app web: refresh token en cookie `httpOnly` `Secure` `SameSite`, y access token en memoria de JavaScript —ni en `localStorage` ni en cookie—. No porque un XSS no pueda leer una variable en memoria, que puede, sino porque no sobrevive a la recarga: el atacante tiene que estar ejecutándose en ese momento en vez de recoger lo que quedó guardado. Se pierde al recargar, y el refresh token lo repone.
 
-**El coste real de la denylist.** Guardar el `jti` (identificador único del token) de lo revocado no es tan caro como suena: solo entran los tokens revocados **antes** de caducar, y cada entrada se autodestruye en cuanto pasa su `exp`. Con quince minutos de vida, la denylist de un sistema mediano cabe holgada en memoria. Lo que sí cambia es la propiedad de la que presumías: vuelves a tener una lectura por petición y un punto compartido que puede caerse. Si aceptas eso, conviene preguntarse en voz alta si no querías sesiones opacas en Redis desde el principio: te dan revocación instantánea, `jti` en todas partes y un token que no filtra nada porque no dice nada.
+**El coste real de la denylist.** Guardar el `jti` de lo revocado no es tan caro como suena: solo entran los tokens revocados **antes** de caducar, y cada entrada se autodestruye en cuanto pasa su `exp`. Con quince minutos de vida, la denylist de un sistema mediano cabe holgada en memoria. Lo que sí cambia es la propiedad de la que presumías: vuelves a tener una lectura por petición y un punto compartido que puede caerse. Si aceptas eso, conviene preguntarse en voz alta si no querías sesiones opacas en Redis desde el principio: te dan revocación instantánea, `jti` en todas partes y un token que no filtra nada porque no dice nada.
 
 **Cuándo JWT no es la respuesta.** El patrón brilla cuando hay varios servicios que verifican y uno que emite, o cuando el verificador no puede hablar con el emisor. Para un monolito con su base de datos al lado, una sesión clásica es más simple, se revoca al instante y no te obliga a explicarle a nadie por qué el usuario expulsado sigue entrando trece minutos.
 
-## Para llevarte
+## Tres reglas para recordar
 
 - **El servidor no guarda el access token**, así que no puede desactivarlo: solo puede esperar a que caduque. El `expiresIn` es el tamaño de esa espera.
 - **El logout de verdad es el del refresh token.** Borrarlo de la tabla corta la sesión hacia adelante; el access token vivo es la ventana con la que decides convivir.
