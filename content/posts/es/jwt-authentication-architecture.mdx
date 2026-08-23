@@ -1,0 +1,91 @@
+---
+title: Arquitectura de autenticación JWT
+description: 'Qué pasa por debajo cuando tu app usa JWT: el recorrido completo desde el login hasta el logout, paso a paso y con cada pieza explicada.'
+date: 2026-08-23
+draft: true
+tags:
+  - autenticacion
+  - jwt
+  - arquitectura
+---
+
+¿Alguna vez te has preguntado qué pasa realmente por debajo cuando entras a una aplicación y esta te "recuerda" en cada pantalla? Hoy vamos a recorrer entero el flujo de la arquitectura de autenticación con JWT: desde que escribes tu correo y tu contraseña hasta que pulsas cerrar sesión, viendo en cada paso quién hace qué, qué se guarda y qué no.
+
+Vamos a usar como ejemplo Lumen, una tienda ficticia, y vamos a ir despacio: cada tramo del flujo primero te lo cuento y después lo ves animado.
+
+Antes de recorrer el flujo, mira la cosa de la que vamos a hablar. Un JWT (JSON Web Token) es una cadena con tres tramos separados por puntos: la **cabecera** dice con qué algoritmo se firmó, el **payload** lleva los datos —quién eres, hasta cuándo vale— y la **firma** permite comprobar que nadie los tocó. Los dos primeros tramos son texto codificado, no cifrado, así que se pueden leer. Edítalo o pega uno tuyo:
+
+<TokenAnatomy token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1XzQyIiwiZXhwIjoxNzg3NDgwMTAwfQ._l5B29M2RtqqduAMA4agCNLiOnGgLa7-1XweDEm94JM" />
+
+Ahí está la idea entera, y conviene fijarla antes de seguir: en lugar de que el servidor recuerde quién eres, eres tú quien lleva la prueba encima. Y esa prueba no es secreta — como acabas de ver, cualquiera que la tenga puede leer lo que hay dentro.
+
+## Todo empieza en el login
+
+Cuando haces login en la aplicación envías tus credenciales, que normalmente son un correo y una contraseña. Esa es la única vez en todo el flujo que la contraseña viaja por la red, y por eso es el único momento que necesita ir sobre HTTPS sí o sí.
+
+El servidor recibe esas credenciales y hace tres cosas, en este orden:
+
+1. **Verifica quién eres.** Busca al usuario y compara la contraseña que llega con el hash que tiene guardado — nunca guarda la contraseña en claro.
+2. **Arma el payload del token.** Es un objeto pequeño con quién eres, en el claim `sub`, y hasta cuándo vale el token, en el claim `exp`. Un claim es cada uno de los campos que van dentro del token, y esos dos nombres cortos vienen del estándar.
+3. **Firma el payload con su secreto** y te devuelve el token.
+
+<ConceptAnimation id="jwt-login" />
+
+Fíjate en cómo termina el flujo: el servidor firma el token, te lo entrega y no guarda ninguna copia. No hay tabla de sesiones, no hay fila que apunte a ti. Esa decisión es la que explica todo lo que viene después, tanto lo bueno como lo incómodo.
+
+## Cada petición lleva el token
+
+Ya tienes el token. A partir de aquí, cada petición que hace la aplicación lo manda en la cabecera `Authorization`, con el formato `Bearer <token>`. "Bearer" significa literalmente "portador": vale por el hecho de tenerlo, como un billete de tren sin nombre.
+
+Del lado del servidor, la validación son tres comprobaciones y ninguna consulta. El token viene en tres tramos separados por puntos —cabecera, payload y firma—, así que primero lo parte. Después recalcula la firma con su secreto y la compara con la que trae el token: si alguien cambió aunque sea un carácter del payload, las dos firmas no coinciden y la petición se rechaza con un 401. Y por último mira el `exp`, la fecha de caducidad, contra su reloj:
+
+<ConceptAnimation id="jwt-validation" />
+
+Lo interesante de este tramo es lo que no aparece: en ningún momento se consultó la base de datos. El servidor no necesita saber nada de ti que no venga escrito en el token, y por eso cualquier servicio que tenga el secreto puede validar por su cuenta, sin hablar con quien lo emitió.
+
+<Callout type="warning" title="El payload no está cifrado">
+  Lo decodificaste al principio del post sin necesitar ningún secreto. La firma
+  garantiza que nadie **modificó** el payload, no que nadie lo **lea**: nunca
+  metas ahí un correo interno, un documento de identidad ni nada que no
+  publicarías.
+</Callout>
+
+## El token caduca, y ahí entra el refresh
+
+Como el token vale por tenerlo, si alguien te lo roba entra como tú. La defensa es que dure poco: quince minutos es un valor habitual. Pero eso abre la pregunta obvia — nadie va a escribir su contraseña cada quince minutos.
+
+Aquí es donde la arquitectura pasa de un token a dos, cada uno con un papel distinto:
+
+- El **access token** es el que acabas de ver: corto, firmado, sin estado, viaja en cada petición.
+- El **refresh token** es una cadena larga y aleatoria, de un solo uso, que sí se guarda en una tabla del servidor y que en el cliente vive en una cookie `httpOnly` —una cookie que el JavaScript de la página no puede leer—. Su único trabajo es conseguirte un access token nuevo.
+
+Cuando el access token caduca, la aplicación no te manda al login: llama al endpoint de refresco, el servidor busca el refresh token en su tabla, comprueba que sigue vigente, emite un par nuevo y marca el viejo como usado:
+
+<ConceptAnimation id="jwt-refresh" />
+
+Ese "marca el viejo como usado" es la parte que mucha gente se salta, y es importante: si un refresh token que ya se canjeó vuelve a aparecer, o hay un bug en el cliente o alguien está usando una copia robada. La respuesta en los dos casos es la misma, invalidar toda la cadena de tokens de esa sesión y obligar a un login.
+
+## El logout, y lo que el logout no puede hacer
+
+Llegamos al final del recorrido. Cerrar sesión mueve dos cosas: el cliente borra su access token y el servidor borra la fila del refresh token, con lo que esa sesión ya no se puede renovar nunca más.
+
+Pero hay una tercera cosa que no se mueve, y aquí es donde la arquitectura enseña su contrapartida. Si existe una copia del access token en algún sitio —en un log, en un proxy, en el portapapeles de alguien—, esa copia sigue teniendo la firma correcta y un `exp` que todavía no ha llegado. Y como acabas de ver, el servidor valida sin consultar nada:
+
+<ConceptAnimation id="jwt-logout" />
+
+Es decir: el logout es completo del lado del refresh token e incompleto del lado del access token. Cortas la renovación al instante y dejas una ventana igual a lo que le quede de vida al token, que con quince minutos de caducidad son como mucho quince minutos. Se puede cerrar esa ventana guardando el identificador de los tokens revocados y consultando esa lista en cada petición, pero eso devuelve al servidor justo el estado que este diseño quería evitar.
+
+## El flujo completo, de un vistazo
+
+Recapitulando todo el recorrido:
+
+| Momento | Qué envía el cliente | Qué hace el servidor | ¿Consulta la base de datos? |
+| :--- | :--- | :--- | :---: |
+| Login | correo y contraseña | verifica y firma el par de tokens | sí |
+| Petición normal | access token | comprueba firma y `exp` | no |
+| Refresco | refresh token | lo busca, lo rota, emite un par nuevo | sí |
+| Logout | refresh token | borra la fila | sí |
+
+Esa columna de la derecha es, en el fondo, de lo que va toda la arquitectura: la petición normal —la que ocurre miles de veces— no toca la base de datos, y ese es el motivo por el que el patrón existe. Todo lo demás son las consecuencias de haber comprado esa propiedad.
+
+Si quieres verlo en tu propio proyecto, abre las herramientas de desarrollo en la pestaña de red, entra a tu aplicación y mira la cabecera `Authorization` de cualquier petición: ahí está el token del que hemos estado hablando todo el post.
