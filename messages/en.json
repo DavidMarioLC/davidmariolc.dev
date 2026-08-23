@@ -154,7 +154,100 @@
     "loading": "Loading the animation…",
     "scrollHint": "Scrollable diagram"
   },
-  "animations": {},
+  "animations": {
+    "jwtLogin": {
+      "title": "How credentials turn into a signed token",
+      "description": "Login flow: the browser sends credentials, the server checks them against the users table, signs a token and then stores nothing.",
+      "steps": {
+        "credentials": "The password leaves the browser exactly once, at login. From here on it never travels again.",
+        "verify": "The server compares what arrived against the stored hash. This is the only moment in the whole pattern that touches the users table.",
+        "sign": "With who you are (sub) and how long for (exp), the server builds the payload and seals it with its secret. The signature hides nothing — it guarantees nobody edited it.",
+        "deliver": "The token goes back to the browser. From now on, whoever holds it is you as far as the server is concerned.",
+        "forget": "The server keeps no copy. That is why it can validate the token later without looking anything up — and why it cannot switch it off."
+      },
+      "nodes": {
+        "browser": "Browser",
+        "browserMeta": "email + password",
+        "server": "Auth server",
+        "serverMeta": "verifies and signs",
+        "users": "Users table",
+        "usersMeta": "password hash",
+        "token": "Signed token",
+        "statelessBadge": "0 sessions stored"
+      }
+    },
+    "jwtValidation": {
+      "title": "What the server does with your token on every request",
+      "description": "Validating a JWT: split it in three, recompute the signature, compare the expiry and answer without touching the database.",
+      "steps": {
+        "arrive": "The request carries the token in the Authorization header. There is no session cookie to look up anywhere.",
+        "split": "A token is three parts separated by dots. The first two are base64, so anyone can read the payload: never put a secret in there.",
+        "signature": "The server recomputes the signature with its secret and compares it to the one in the token. If anyone edited the payload it no longer matches, and that is a 401.",
+        "expiry": "Then it compares exp against its own clock. An expired token ends in the same 401, however perfect the signature is.",
+        "serve": "If both checks pass, the sub claim is the identity and the request gets served.",
+        "stateless": "None of this queried the database. That is the scaling win — and the reason a valid token cannot be switched off."
+      },
+      "nodes": {
+        "request": "Request",
+        "verify": "Validation",
+        "okMeta": "identity = sub",
+        "reasonSignature": "signature mismatch",
+        "reasonExpiry": "or exp already past",
+        "dbMeta": "sessions: 0 queries"
+      },
+      "checks": {
+        "formatMeta": "3 parts, base64url",
+        "signatureMeta": "recomputed, not read",
+        "expiryMeta": "the server's clock"
+      }
+    },
+    "jwtRefresh": {
+      "title": "Why the pattern needs two tokens, not one",
+      "description": "The refresh cycle: the access token expires, the client trades the refresh token for a fresh pair, and the old one is marked as used.",
+      "steps": {
+        "expired": "Fifteen minutes in, the access token expires and the ordinary request comes back with a 401. Nothing broke: this was the plan.",
+        "ask": "The client does not ask for your password again. It calls /refresh with the refresh token, which travels in a cookie the page's JavaScript cannot read.",
+        "lookup": "Here there is a lookup. The refresh token lives in a table, and it is the only stateful piece of the pattern.",
+        "rotate": "The server issues a fresh pair and marks the old one as used. A refresh token is worth exactly one use.",
+        "retry": "The client retries the original request with the new access token and it goes through. You never noticed a thing.",
+        "reuse": "If the used refresh token shows up again, somebody has a copy. The answer is to invalidate the whole family and force a login."
+      },
+      "nodes": {
+        "client": "Client",
+        "api": "API",
+        "api401": "401 · exp passed",
+        "api200": "200 OK",
+        "authMeta": "rotates the pair",
+        "stateValid": "valid",
+        "stateUsed": "used",
+        "reuseBadge": "reuse → family revoked",
+        "stateRevoked": "revoked"
+      }
+    },
+    "jwtLogout": {
+      "title": "Why logging out does not switch the token off",
+      "description": "Logging out with JWT: the client drops its token and the server deletes the refresh token, but a copy of the access token keeps passing validation until it expires.",
+      "steps": {
+        "clear": "Logging out deletes the token from the browser. That is all the client can do: remove it from its own side.",
+        "revoke": "The refresh token really is revocable, because it lives in a table. Deleting it closes the door on renewing the session.",
+        "copy": "But a copy of the access token — in a log, in a proxy, in somebody's clipboard — still carries a correct signature and an exp that has not arrived. The API answers 200.",
+        "denylist": "The way out is a denylist: you store the revoked token's jti until its exp, and the API checks it before serving.",
+        "tradeoff": "And there is the state JWT was trying to avoid. You pick: short tokens with a window of minutes, or instant revocation with one read per request."
+      },
+      "nodes": {
+        "client": "Client",
+        "cleared": "token cleared client-side",
+        "revoked": "revoked",
+        "copy": "Access token copy",
+        "copyMeta": "in a log, in a proxy",
+        "api": "API",
+        "api200": "200 OK · session closed",
+        "api401": "401 · on the denylist",
+        "stateful": "1 read per request",
+        "tradeoff": "stateless window   vs   instant revocation"
+      }
+    }
+  },
   "challenge": {
     "reveal": "Show answer"
   },

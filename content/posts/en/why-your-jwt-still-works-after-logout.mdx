@@ -1,0 +1,178 @@
+---
+title: Why does your JWT still work after you log out?
+description: 'Logging out drops the token on the client, but the server never stored it. Walk the full life of a JWT and you will see where the session can actually be cut.'
+date: 2026-08-21
+draft: true
+tags:
+  - authentication
+  - jwt
+  - security
+---
+
+In the dashboard of Slow Market, a made-up shop, the log out button does this:
+
+```ts title="src/auth/logout.ts"
+export function logout() {
+  localStorage.removeItem("access_token");
+  router.push("/login");
+}
+```
+
+Before clicking it you copied the token into a file. Now, with the session "closed", you paste it into a `curl` against the API. What comes back?
+
+## The surprise: the token never heard about the logout
+
+<CommandCompare
+  caption="The same token, with the session open and after closing it."
+  variants={[
+    {
+      label: "session open",
+      command: "curl -i -H \"Authorization: Bearer $T\" /orders",
+      output: "HTTP/2 200\n{\"orders\": [ ... ]}",
+      exitCode: 0,
+    },
+    {
+      label: "after logout",
+      command: "curl -i -H \"Authorization: Bearer $T\" /orders",
+      output: "HTTP/2 200\n{\"orders\": [ ... ]}",
+      exitCode: 0,
+    },
+  ]}
+/>
+
+Two hundred both times. If you expected a 401, you are in good company: that is what any classic session system does, where logging out deletes a row and the next request finds nothing.
+
+With a JWT (JSON Web Token: a signed object the client stores and resends on every request) there is no row to delete. The server never stored your token. And you cannot delete what you never held.
+
+## The intuition: the festival wristband
+
+There are two ways to let people into a venue.
+
+The first is the **list**. There is a tablet at the gate with everyone's name, and security looks yours up each time you walk in. If you get thrown out, your name is deleted and the next attempt finds nothing. That is a classic session: the state lives on the server, and the cookie is just a number pointing at it.
+
+The second is the **wristband**. You show ID once at the box office, they put a band on you with a seal nobody can forge, and from then on nobody looks anything up: the person at the gate checks the seal, checks that the printed date has not passed, and waves you through. It is fast, it works across twenty gates, and none of them needs to talk to the box office.
+
+That is a JWT. And the trade-off is exactly the one that just bit you: **if you get thrown out of the festival, the band on your wrist is still valid**. Nobody can deactivate it remotely, because it is not on any list. It only expires.
+
+Every awkward part of this pattern comes from there. Let's walk the whole thing with that picture in mind.
+
+### How the band goes on
+
+<ConceptAnimation id="jwt-login" />
+
+The thing to hold on to is the last step: the server signs the token and lets it go. It writes it down nowhere. That single decision is what makes the rest of the pattern behave the way it does.
+
+### How the gate reads it
+
+<ConceptAnimation id="jwt-validation" />
+
+Notice what is **not** in that animation: a database query. A server that validates this way takes any amount of traffic and replicates without coordination, because each replica only needs the secret.
+
+<Callout type="warning" title="The payload is not encrypted">
+  The first two parts of a JWT are `base64url`, not cryptography. Paste any
+  token into `atob()` and you will read the contents. The signature guarantees
+  nobody **changed** it, not that nobody **reads** it. Never put an internal
+  email, an ID number, or anything you would not publish in there.
+</Callout>
+
+## The example, step by step
+
+Signing and verifying are five lines. This is the naive version, the one nearly everyone writes first:
+
+```ts title="src/auth/tokens.ts"
+export function issue(userId: string) {
+  return jwt.sign({ sub: userId }, process.env.JWT_SECRET);
+}
+```
+
+With no `exp`, the wristband has no printed date: it lasts forever. A token leaked today still opens the gate next year. The minimum fix is an expiry:
+
+```ts title="src/auth/tokens.ts"
+return jwt.sign({ sub: userId }, process.env.JWT_SECRET); // [!code --]
+return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { // [!code ++]
+  expiresIn: "15m", // [!code ++]
+}); // [!code ++]
+```
+
+Which surfaces the obvious problem: fifteen minutes. Nobody is going to retype their password four times an hour.
+
+### Which is why there are two tokens
+
+The fix is to separate the two jobs you had merged. The **access token** is today's wristband: short, stateless, shown at every gate. The **refresh token** is the festival pass: long-lived, stored in a table on the server, single-use, and good for getting tomorrow's wristband without going back to the box office with your ID.
+
+<ConceptAnimation id="jwt-refresh" />
+
+In code, the refresh token is the opposite of the access token: it gets stored, looked up, and marked.
+
+```ts title="src/auth/refresh.ts"
+const stored = await db.refreshTokens.findByHash(sha256(incoming));
+
+if (!stored || stored.usedAt) {
+  await db.refreshTokens.revokeFamily(stored?.familyId);
+  throw new AuthError("invalid refresh token");
+}
+
+await db.refreshTokens.markUsed(stored.id);
+return issuePair(stored.userId, stored.familyId);
+```
+
+That `stored.usedAt` is the part people skip. If a refresh token that was already redeemed shows up again, either the client has a bug or somebody is using a stolen copy. In both cases the correct answer is the same: tear down the whole token family and force a login.
+
+### And now, the logout
+
+With both pieces on the table, it is clear why the `curl` at the top returned 200.
+
+<ConceptAnimation id="jwt-logout" />
+
+The honest summary: **logout is complete for the refresh token and partial for the access token**. You cut the ability to renew the session immediately, and you leave a window the size of whatever life the access token has left. With a fifteen-minute `expiresIn`, that window is fifteen minutes at worst.
+
+<Callout type="tip" title="Pick `expiresIn` by looking at that window">
+  Do not pick it for convenience: it is literally how long an already-closed
+  session survives. Fifteen minutes is reasonable for an internal dashboard.
+  For anything that moves money, the question is not "how long should the token
+  last" but "how long can you go without being able to cut someone off".
+</Callout>
+
+## Your turn
+
+The team puts the role in the payload so they do not have to look it up on every request:
+
+```ts title="src/auth/tokens.ts"
+jwt.sign({ sub: userId, role: "admin" }, secret, { expiresIn: "15m" });
+```
+
+At 10:00 you strip someone's admin role in the database. Their token was issued at 9:58. When do they stop being an admin?
+
+<Challenge summary="See what actually happens">
+  At 10:13, not at 10:00.
+
+  The server never reads the roles table: it reads `role` from the payload, and
+  that payload froze the moment it was signed. Changing the database does not
+  change a wristband that is already printed. For thirteen minutes that person
+  keeps walking in as an administrator with a perfectly valid token.
+
+  It is the logout problem wearing different clothes: **everything you put in
+  the payload is a copy with an expiry date, not a lookup**. It works for what
+  rarely changes (`sub`, the tenant) and is a trap for anything someone can
+  change by decision, like permissions or account status.
+</Challenge>
+
+## Going deeper
+
+**`alg: none` and algorithm confusion.** The first field of a token says which algorithm signed it, and it was chosen by whoever sent it to you. The spec even allowed `"alg": "none"`, an unsigned token that a careless library would happily accept. The modern variant is worse: if your server signs with RS256 (private and public key) and someone resends the token claiming `HS256`, a naive implementation will verify the HMAC using **the public key** — which is public — as the secret. This is why serious libraries take the expected algorithm as a required argument to `verify`, and why you must never read it from the token itself.
+
+**HS256 versus RS256 is not a security decision, it is a topology one.** HS256 uses a single shared secret: whoever can verify can also sign. That is fine while the issuer and the verifier are the same service. The moment five services verify tokens, HS256 means five services able to mint admin tokens. RS256 signs with the private key and verifies with the public one, so you can hand the public key out everywhere without handing out the power to issue.
+
+**Where to keep the access token.** `localStorage` is convenient and readable by any script that sneaks onto your page; an `httpOnly` cookie is invisible to JavaScript but rides along on every request, which opens the CSRF door unless you pair it with `SameSite=Lax` and an origin check. There is no free option. The current consensus for a web app: refresh token in an `httpOnly` `Secure` `SameSite` cookie, access token in JavaScript memory — not `localStorage`, not a cookie — accepting that it is lost on reload, because the refresh token puts it back.
+
+**What a denylist actually costs.** Storing the `jti` (the token's unique id) of everything revoked is cheaper than it sounds: only tokens revoked **before** expiring go in, and each entry deletes itself once its `exp` passes. With a fifteen-minute lifetime, a mid-sized system's denylist fits comfortably in memory. What does change is the property you were bragging about: you are back to one read per request and a shared point that can go down. If you accept that, it is worth asking out loud whether you wanted opaque sessions in Redis all along — instant revocation, an id everywhere, and a token that leaks nothing because it says nothing.
+
+**When JWT is not the answer.** The pattern shines when several services verify and one issues, or when the verifier cannot talk to the issuer. For a monolith with its database next door, a classic session is simpler, revokes instantly, and spares you from explaining why the user you just removed keeps getting in for thirteen more minutes.
+
+## Takeaways
+
+- **The server does not store the access token**, so it cannot deactivate it — it can only wait for it to expire. `expiresIn` is the size of that wait.
+- **The real logout is the refresh token's.** Deleting its row cuts the session going forward; the live access token is the window you choose to live with.
+- **The payload is a photo, not a mirror.** Anything you put in it stays true to the server until the token dies, even after it stopped being true in the database.
+
+Open your API, copy a valid access token, log out, and repeat the request. If it returns 200, you now know exactly how many minutes that window lasts — and if it returns 401, go find the lookup that makes it possible and what it is costing you.
