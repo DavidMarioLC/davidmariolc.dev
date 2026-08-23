@@ -4,3 +4,6 @@
 - slug: solid
   title: SOLID, un principio a la vez
   description: Los cinco principios explicados desde el problema que cada uno resuelve, con TypeScript y sin sermones.
+- slug: jwt-auth
+  title: Autenticación con JWT, pieza por pieza
+  description: Cómo se reparte una sesión entre cliente, verificadores y base de datos, y qué se puede cortar de verdad en cada pieza.

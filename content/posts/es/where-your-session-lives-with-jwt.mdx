@@ -1,0 +1,150 @@
+---
+title: ¿Dónde vive tu sesión cuando usas JWT?
+description: 'Abres la base de datos buscando la tabla de sesiones y no hay ninguna. Recorre las tres piezas donde sí vive tu sesión y qué guarda cada una.'
+date: 2026-08-23
+draft: true
+series: jwt-auth
+seriesOrder: 1
+tags:
+  - autenticacion
+  - jwt
+  - arquitectura
+---
+
+En Mercado Lento, una tienda ficticia, el login se resolvió en dos líneas:
+
+```ts title="src/auth/login.ts"
+const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, {
+  expiresIn: "15m",
+});
+localStorage.setItem("access_token", token);
+```
+
+Funciona a la primera. Una semana después alguien pregunta cuánta gente hay conectada ahora mismo, abres la base de datos buscando la tabla de sesiones y no encuentras ninguna. ¿Dónde está la sesión?
+
+## La tabla de sesiones que no existe
+
+No la borró nadie: nunca se creó. Si esperabas encontrarla, es lo normal — en un sistema de sesiones clásico el login inserta una fila, la cookie guarda su identificador y esa fila *es* la sesión.
+
+Con JWT (JSON Web Token: un objeto firmado que el cliente guarda y reenvía en cada petición) no hay fila que buscar. Ese `sub` del snippet —el claim que dice de quién es el token— viaja dentro del propio token, y el servidor lo lee de ahí en lugar de consultarlo. La sesión no desapareció: está repartida entre piezas que apenas se hablan, y saber cuál guarda qué es prácticamente todo el diseño.
+
+## Tu sesión vive en tres sitios a la vez
+
+Piensa en cómo funciona un hotel.
+
+En recepción enseñas el DNI una sola vez y te dan una tarjeta codificada con tu habitación y una fecha de caducidad. A partir de ahí, cada cerradura de la planta decide sola: no llama a recepción, no tiene conexión, solo sabe comprobar que el código es legítimo y que la fecha no ha pasado. Y en el ordenador de recepción queda tu reserva, que es lo que te permite pedir una tarjeta nueva mañana sin volver a enseñar el DNI.
+
+Tres piezas, tres cosas distintas:
+
+| Pieza del hotel | Qué guarda | Dónde vive |
+| :--- | :--- | :--- |
+| La tarjeta | quién eres y hasta cuándo | en tu bolsillo — el cliente |
+| La cerradura | cómo verificar una tarjeta | en cada servicio que valida |
+| La reserva | tu derecho a otra tarjeta | en una tabla del servidor |
+
+Ninguna de las tres sabe lo que hacen las otras dos. Ahí está la ganancia del patrón, y también todo lo que después resulta incómodo.
+
+### Recepción firma la tarjeta y no apunta nada
+
+El login es el único momento en que la contraseña viaja. El servidor la compara con el hash que tiene guardado, arma un payload con quién eres (el claim `sub`) y hasta cuándo vale (el claim `exp`, la fecha de caducidad que la librería escribe cuando le pasas `expiresIn`), lo sella con su secreto y devuelve el token:
+
+<ConceptAnimation id="jwt-login" />
+
+El paso que define la arquitectura es el último: el servidor firma y no guarda copia. Por eso no hay ninguna tabla de sesiones que consultar — y por eso, cuando llegue el momento de cerrar la sesión, tampoco habrá nada que borrar.
+
+### Cada cerradura decide sola
+
+En cada petición el servidor hace tres cosas con el token que llega. Lo parte por los puntos en sus tres tramos —cabecera, payload y firma—, recalcula la firma con su secreto y la compara con la que trae, y mira si el `exp` del payload ya pasó. Si algo falla, 401:
+
+<ConceptAnimation id="jwt-validation" />
+
+Lo importante es lo que **no** hubo: una consulta a la base de datos. Esa es la propiedad que compras con todo lo demás — cualquier servicio que tenga el secreto puede validar sin coordinarse con quien emitió, así que el patrón encaja cuando hay muchos verificadores y un único emisor.
+
+<Callout type="warning" title="El payload no está cifrado">
+  Las dos primeras partes del token son `base64url`, no criptografía. La firma
+  garantiza que nadie **modificó** el payload, no que nadie lo **lea**: quien
+  tenga el token puede decodificarlo entero. Es la tarjeta del hotel con el
+  número de habitación impreso encima. Nunca metas ahí un correo interno, un
+  documento de identidad ni nada que no publicarías.
+</Callout>
+
+## Del token suelto al par access token + refresh token
+
+Vuelve al código del gancho. Emite un token con quince minutos de vida y no prevé quién lo renueva, así que a los quince minutos exactos la API empieza a devolver 401 y el usuario se cae en mitad de un formulario. Nadie va a escribir su contraseña cada cuarto de hora, y estirar el `expiresIn` a una semana solo cambia el problema de sitio: una tarjeta robada abriría la puerta durante siete días.
+
+La salida es separar los dos papeles que estaban mezclados en un único token. El **access token** es la tarjeta del día: corto, sin estado, se enseña en cada puerta. El **refresh token** es la reserva en recepción: largo, de un solo uso, guardado en una tabla del servidor y —del lado del cliente— en una cookie `httpOnly`, que el JavaScript de la página no puede leer.
+
+<ConceptAnimation id="jwt-refresh" />
+
+Ahí está la asimetría que organiza el patrón entero: el access token no se guarda en ningún sitio, y por eso se valida sin consultar a nadie; el refresh token sí se guarda, y por eso cada uso cuesta una lectura y puede invalidarse.
+
+En el login eso significa emitir dos cosas en lugar de una:
+
+```ts title="src/auth/login.ts"
+const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { // [!code --]
+  expiresIn: "15m", // [!code --]
+}); // [!code --]
+localStorage.setItem("access_token", token); // [!code --]
+const { accessToken, refreshToken } = issuePair(user.id); // [!code ++]
+```
+
+`issuePair` firma el access token igual que antes y además genera un refresh token opaco: una cadena aleatoria, sin claims dentro, que el servidor no verifica sino que busca. Cada uno se guarda en un sitio distinto, y ese reparto es la mitad de la seguridad del esquema:
+
+```ts title="src/auth/login.ts"
+await db.refreshTokens.save({ hash: sha256(refreshToken), userId: user.id });
+
+res.cookie("refresh_token", refreshToken, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "lax",
+});
+res.json({ accessToken });
+```
+
+La tabla guarda el hash del refresh token y no el token, igual que con una contraseña: quien se lleve un volcado de la base de datos no se lleva sesiones. Y el access token vuelve en el cuerpo de la respuesta para que el cliente lo tenga en memoria de JavaScript, no en `localStorage` como en el gancho. La diferencia práctica es la recarga: lo que está en `localStorage` sigue ahí mañana, así que a un atacante le basta con pasar una vez; lo que está en memoria obliga a estar ejecutándose justo en ese momento.
+
+## Qué se lleva el checkout
+
+Cerrar sesión mueve dos de las tres piezas. El cliente suelta su access token y el servidor borra la fila del refresh token, con lo que la sesión ya no se puede renovar. La tercera pieza no se mueve: cualquier copia del access token que ande suelta —en un log, en un proxy— sigue teniendo la firma correcta y un `exp` que no ha llegado.
+
+<ConceptAnimation id="jwt-logout" />
+
+Es el checkout del hotel. Tu reserva desaparece del ordenador de recepción, y la tarjeta que alguien copió sigue abriendo la puerta hasta su fecha, porque la cerradura no se entera de nada. Con quince minutos de `expiresIn` esa ventana dura como mucho quince minutos; cerrarla del todo exige devolverle estado a la validación —volver a poner a las cerraduras una lista de tarjetas quemadas—, y de eso va el siguiente post de la serie.
+
+## ¿Quién puede emitir un token de administrador?
+
+Mercado Lento crece. Ahora hay cuatro servicios que validan tokens —pedidos, pagos, catálogo y notificaciones— y uno solo que los emite, el de autenticación. Los cinco comparten el mismo `process.env.JWT_SECRET`, porque firman con HS256, el algoritmo de secreto compartido. ¿Cuántos de esos servicios pueden emitir un token que diga `role: "admin"`?
+
+<Challenge summary="Ver la cuenta real">
+  Los cinco.
+
+  En HS256 el secreto que verifica es exactamente el mismo que firma, así que
+  cualquiera capaz de comprobar un token es capaz de fabricarlo. El servicio de
+  notificaciones, que solo necesitaba saber a quién mandarle un correo, puede
+  firmarse un token de administrador y entrar en pagos con él.
+
+  Por eso HS256 o RS256 no es una decisión sobre cuánta seguridad quieres, sino
+  sobre la forma de tu sistema: RS256 firma con una clave privada y verifica con
+  la pública, así que puedes repartir la pública por los cuatro verificadores
+  sin repartir la capacidad de emitir.
+</Challenge>
+
+## Los detalles que muerden en producción
+
+**Las claves rotan, y por eso existe `kid`.** Si un día cambias la clave con la que firmas, los tokens ya emitidos dejan de verificar de golpe. La cabecera del token lleva un `kid` (key id) que dice con qué clave se firmó, y el verificador elige la correcta de un juego de claves — típicamente publicado en un endpoint JWKS que los servicios cachean. Con eso conviven dos claves durante la transición y ningún usuario nota nada.
+
+**`iss` y `aud` existen porque un token válido puede ser el token equivocado.** El claim `iss` (issuer) dice quién lo emitió y `aud` (audience) para qué servicio es. Sin comprobar `aud`, un token que un usuario obtuvo legítimamente para el servicio de catálogo también entra en el de pagos, porque la firma cuadra igual. Verificar la firma es solo la mitad del trabajo: la otra mitad es comprobar que el token venía dirigido a ti.
+
+**El `exp` se compara contra el reloj de cada verificador.** Cinco máquinas tienen cinco relojes, y unos segundos de desfase bastan para que una rechace tokens que las otras aceptan, con un 401 intermitente imposible de reproducir. Las librerías serias admiten una tolerancia (`clockTolerance`) de unos pocos segundos; el arreglo de fondo es NTP en todas las máquinas.
+
+**Validar en el gateway o en cada servicio.** Validar una sola vez en el borde es cómodo y deja los servicios internos confiando en una cabecera; validar en cada servicio cuesta unos microsegundos por petición y elimina la suposición de que nadie llega desde dentro de la red. Si eliges lo primero, que sea una decisión escrita y no un accidente.
+
+**Cuándo JWT no es la respuesta.** El patrón brilla con varios verificadores y un emisor, o cuando el verificador no puede hablar con el emisor. Para un monolito con su base de datos al lado, una sesión clásica es más simple, se revoca al instante y no te obliga a explicarle a nadie dónde vive la sesión.
+
+## Tres reglas para recordar
+
+- **Tu sesión vive en tres sitios**: el access token en el cliente, la capacidad de verificarlo en cada servicio y el refresh token en una tabla. Cada problema del patrón se entiende preguntando cuál de los tres se enteró del cambio.
+- **El access token no se guarda en ninguna parte**, y esa única decisión te da la validación sin consultas y te quita la revocación.
+- **El refresh token es la única pieza con estado**, así que es la única que puedes borrar de verdad: todo lo que quieras poder cortar tiene que apoyarse en ella.
+
+Abre el login de tu proyecto y responde a tres preguntas: qué token emites, dónde acaba guardado cada uno y qué servicios comparten el secreto. Si la respuesta a la tercera es "todos", ya sabes cuántos de ellos pueden firmarse un token de administrador.

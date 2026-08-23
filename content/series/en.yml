@@ -4,3 +4,6 @@
 - slug: solid
   title: SOLID, one principle at a time
   description: The five principles explained from the problem each one solves, in TypeScript and without the lecture.
+- slug: jwt-auth
+  title: JWT auth, piece by piece
+  description: How a session gets split between the client, the verifiers and the database, and what you can actually cut off at each piece.
