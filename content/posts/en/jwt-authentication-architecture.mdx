@@ -8,39 +8,41 @@ tags:
   - architecture
 ---
 
-Have you ever wondered what actually happens under the hood when you sign in to an application and it "remembers" you on every screen? Today we're going to walk the whole JWT authentication flow: from the moment you type your email and password to the moment you hit log out, seeing at each step who does what, what gets stored and what doesn't.
+Have you ever wondered what happens under the hood when you sign in to an application and it "remembers" you on every screen? Today we're going to walk the whole JWT authentication flow, from login to logout.
 
-We'll use Lumen, a fictional store, as our example, and we'll take it slowly: for each stage of the flow I'll tell you what happens first, and then you'll see it animated.
+Let's start with the problem, because everything comes out of it: the server does not remember you. HTTP keeps nothing between one request and the next, so every request arrives as if it were the first. The classic way out is to have it write things down —a session row it looks up every time— and that costs a lookup per request plus a store every one of your servers can reach.
 
-Before walking the flow, take a look at the thing we're going to talk about. A JWT (JSON Web Token) is a string with three parts separated by dots: the **header** says which algorithm signed it, the **payload** carries the data —who you are, how long it's good for— and the **signature** is what lets anyone check that nobody tampered with them. The first two parts are encoded text, not encrypted, so they can be read. Edit it, or paste one of your own:
+The other way out is to turn it around: nobody remembers anything, and the proof of who you are travels with you. For that to hold, the server has to be able to check it without looking anything up, and you must not be able to edit it, because if you could you'd swap your identifier for the administrator's. Data signed with a secret only the server knows does both.
+
+That is a JWT (JSON Web Token): three parts separated by dots, where the **header** says which algorithm signed it, the **payload** carries the data —who you are, how long it's good for— and the **signature** lets anyone check that nobody tampered with them. The first two are encoded text, not encrypted, so they can be read. Edit it, or paste one of your own:
 
 <TokenAnatomy token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1XzQyIiwiZXhwIjoxNzg3NDgwMTAwfQ._l5B29M2RtqqduAMA4agCNLiOnGgLa7-1XweDEm94JM" />
 
-That's the whole idea, and it's worth fixing in your head before we go on: instead of the server remembering who you are, you're the one carrying the proof. And that proof isn't secret — as you just saw, anyone holding it can read what's inside.
+Change one character of the payload and the signature stops adding up: that's the whole property. Instead of the server remembering who you are, you carry the proof and it only has to know how to check it. It isn't secret, though: anyone holding it can read what's inside.
 
 ## It all starts at login
 
-When you log in to the application you send your credentials, which are usually an email and a password. That's the only time in the entire flow that the password travels over the network, and that's why it's the one moment that absolutely has to go over HTTPS.
+When you log in you send your credentials, usually an email and a password. That's the only time in the entire flow that the password travels over the network, and the one moment that absolutely has to go over HTTPS.
 
 The server receives those credentials and does three things, in this order:
 
 1. **It verifies who you are.** It looks up the user and compares the incoming password against the stored hash — it never keeps the password in the clear.
 2. **It builds the token's payload.** A small object holding who you are, in the `sub` claim, and how long the token is good for, in the `exp` claim. A claim is each of the fields that go inside the token, and those two short names come from the standard.
-3. **It signs the payload with its secret** and hands the token back to you.
+3. **It signs the payload with its secret** and hands the token back to you. Without that signature the payload would be a JSON object anyone could edit: swap the `sub` for another user's and you become that person. The signature is what lets the server trust a piece of data that has been in your hands.
 
 <ConceptAnimation id="jwt-login" />
 
-Notice how the flow ends: the server signs the token, hands it over and keeps no copy at all. There's no sessions table, no row pointing at you. That decision is what explains everything that follows, both the good parts and the awkward ones.
+The step that settles everything else is the last one: the server signs the token, hands it over and keeps no copy at all. There's no sessions table, no row pointing at you. That decision is what explains everything that follows, both the good parts and the awkward ones.
 
 ## Every request carries the token
 
-Now you have the token. From here on, every request the application makes sends it in the `Authorization` header, in the form `Bearer <token>`. "Bearer" means exactly that — the holder: it's good because you have it, like a train ticket with no name on it.
+You have the token now. Every request the application makes sends it in the `Authorization` header, in the form `Bearer <token>`. "Bearer" means exactly that — the holder: it's good because you have it, like a train ticket with no name on it.
 
-On the server side, validation is three checks and not one lookup. The token arrives as three parts separated by dots —header, payload and signature— so first it splits it. Then it recomputes the signature with its secret and compares it against the one the token carries: if anyone changed even a single character of the payload, the two signatures don't match and the request is rejected with a 401. And finally it checks `exp`, the expiry date, against its clock:
+On the server side, validation is three checks and not one lookup. First it splits the token into its three parts. Then it recomputes the signature with its secret and compares it against the one the token carries: if anyone changed even a single character of the payload, the two signatures don't match and the request is rejected with a 401. And finally it checks `exp`, the expiry date, against its clock:
 
 <ConceptAnimation id="jwt-validation" />
 
-The interesting thing about this stage is what's missing: at no point was the database queried. The server doesn't need to know anything about you that isn't written in the token, which is why any service holding the secret can validate on its own, without talking to whoever issued it.
+The interesting thing about this stage is what's missing: at no point was the database queried. That's exactly the property we were after at the start, and this is where it pays out. The server doesn't need to know anything about you that isn't written in the token, which is why any service holding the secret can validate on its own.
 
 <Callout type="warning" title="The payload is not encrypted">
   You decoded it at the top of this post without needing any secret. The
@@ -56,27 +58,27 @@ Since the token is good simply because you hold it, anyone who steals it gets in
 This is where the architecture goes from one token to two, each with a different job:
 
 - The **access token** is the one you just saw: short-lived, signed, stateless, sent on every request.
-- The **refresh token** is a long random string, single-use, which *is* stored in a table on the server and which on the client lives in an `httpOnly` cookie —a cookie the page's JavaScript cannot read—. Its only job is to get you a new access token.
+- The **refresh token** is a long random string, single-use, which *is* stored in a table on the server and which on the client lives in an `httpOnly` cookie —a cookie the page's JavaScript cannot read, so a script injected into the page can't walk off with it and renew your session indefinitely—. Its only job is to get you a new access token.
+
+A refresh token living in a table looks like handing back the state we had just removed, and the difference is how often it's read: the access token is validated on every request without touching the database; the refresh token is looked up once every fifteen minutes. The expensive query is paid once per stretch of session, not thousands of times.
 
 When the access token expires, the application doesn't send you back to the login screen: it calls the refresh endpoint, the server looks the refresh token up in its table, checks that it's still valid, issues a new pair and marks the old one as used:
 
 <ConceptAnimation id="jwt-refresh" />
 
-That "marks the old one as used" is the part a lot of people skip, and it matters: if a refresh token that was already redeemed shows up again, either the client has a bug or somebody is using a stolen copy. The answer is the same in both cases — invalidate that session's entire chain of tokens and force a fresh login.
+That "marks the old one as used" is the part a lot of people skip: if a refresh token that was already redeemed shows up again, either the client has a bug or somebody is using a stolen copy. The answer is the same in both cases — invalidate that session's entire chain of tokens and force a fresh login.
 
 ## Logging out, and what logging out can't do
 
-We've reached the end of the walk. Logging out moves two things: the client drops its access token, and the server deletes the refresh token's row, so that session can never be renewed again.
+Logging out moves two things: the client drops its access token, and the server deletes the refresh token's row, so that session can never be renewed again.
 
-But there's a third thing that doesn't move, and this is where the architecture shows its trade-off. If a copy of the access token exists somewhere —in a log, in a proxy, in somebody's clipboard— that copy still carries a correct signature and an `exp` that hasn't arrived yet. And as you just saw, the server validates without looking anything up:
+But there's a third thing that doesn't move, and this is where the architecture shows its trade-off. If a copy of the access token exists somewhere —in a log, in a proxy, in somebody's clipboard— that copy still carries a correct signature and an `exp` that hasn't arrived yet. And the server validates without looking anything up:
 
 <ConceptAnimation id="jwt-logout" />
 
-In other words: logging out is complete on the refresh token side and incomplete on the access token side. You cut off renewal instantly and you leave a window as long as whatever life the token has left, which with a fifteen-minute expiry is fifteen minutes at most. You can close that window by storing the identifier of revoked tokens and checking that list on every request, but that hands the server back exactly the state this design set out to avoid.
+In other words: logging out is complete on the refresh token side and incomplete on the access token side. You cut off renewal instantly and leave a window as long as the token's remaining life — at most fifteen minutes. You can close that window by storing the identifier of revoked tokens and checking that list on every request, but that hands the server back exactly the state this design set out to avoid.
 
 ## The whole flow at a glance
-
-Recapping the entire walk:
 
 | Moment | What the client sends | What the server does | Does it query the database? |
 | :--- | :--- | :--- | :---: |
@@ -85,6 +87,6 @@ Recapping the entire walk:
 | Refresh | refresh token | looks it up, rotates it, issues a new pair | yes |
 | Logout | refresh token | deletes the row | yes |
 
-That right-hand column is, deep down, what this whole architecture is about: the normal request —the one that happens thousands of times— never touches the database, and that's the reason the pattern exists at all. Everything else is a consequence of having bought that property.
+That right-hand column is the answer to the problem we opened with: the normal request —the one that happens thousands of times— never touches the database. The two tokens, the rotation and the half-finished logout are the price of that single property.
 
-If you want to see it in your own project, open the dev tools on the network tab, sign in to your application and look at the `Authorization` header of any request: that's the token we've been talking about for this entire post.
+If you want to see it in your own project, open the dev tools on the network tab, sign in to your application and look at the `Authorization` header of any request: that's the token we've been talking about all along.
