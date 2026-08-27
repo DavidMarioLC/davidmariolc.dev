@@ -376,6 +376,70 @@
         "mounted": "<Summary /> mounted",
         "seam": "same page, same DOM, no seam"
       }
+    },
+    "srpReasonsToChange": {
+      "title": "Three reasons to change the same file",
+      "description": "Backend, billing and design all edit the same OrderTable component; once it splits into three pieces, each change stops touching the other two.",
+      "steps": {
+        "endpoint": "The backend team changes the orders endpoint. That means opening OrderTable, because the server call lives inside it.",
+        "pileUp": "Billing changes the rounding and design changes the columns. All three changes land on the same file, and none of them relates to the others.",
+        "conflict": "Three teams editing one file in the same week is a merge conflict per branch, and a rounding test you can't write without spinning up a fake server.",
+        "split": "The seam separates the three reasons: the data in a hook, the money rules in a pure function and the rendering in the component.",
+        "isolated": "Another server change arrives and it only opens useOrders. The money rules and the rendering never hear about it: that's what one reason to change means."
+      },
+      "actors": {
+        "backend": "Backend",
+        "billing": "Billing",
+        "design": "Design"
+      },
+      "actorsMeta": {
+        "backend": "changes the endpoint",
+        "billing": "changes the rounding",
+        "design": "changes the columns"
+      },
+      "nodes": {
+        "table": "OrderTable",
+        "tableMeta": "fetch · format · render"
+      },
+      "pieces": {
+        "data": "useOrders()",
+        "money": "formatAmount()",
+        "view": "OrderTable"
+      },
+      "piecesMeta": {
+        "data": "the data",
+        "money": "the money rules",
+        "view": "the rendering"
+      },
+      "badges": {
+        "edited": "being edited",
+        "reasons": "3 reasons to change",
+        "conflict": "merge conflicts"
+      }
+    },
+    "dipInvertedArrow": {
+      "title": "The dependency arrow turning around",
+      "description": "Three screens import the database client directly; once a contract they own sits in the middle, the provider's arrow turns to point at that contract.",
+      "steps": {
+        "importing": "OrderList imports the Supabase client and calls it. The screen, which is the stable thing, names the provider, which is the volatile one.",
+        "everyScreen": "It isn't one screen: they all do the same. Every one of them keeps the concrete provider's name inside.",
+        "swap": "The day you swap providers, add a cache or move behind your own API, all three have to be opened. The volatile detail is written everywhere.",
+        "contract": "The seam is a contract: OrderRepository states what the screen needs, in the screen's own terms. Each screen defines its own.",
+        "invert": "Supabase now satisfies that contract. Both arrows point to the middle: nobody names the provider any more, and swapping it opens no screen at all."
+      },
+      "nodes": {
+        "orderList": "OrderList",
+        "invoiceList": "InvoiceList",
+        "customerList": "CustomerList",
+        "contract": "OrderRepository",
+        "contractMeta": "list(): Order[]",
+        "supabase": "Supabase"
+      },
+      "badges": {
+        "import": "@/lib/supabase",
+        "swap": "swapping provider",
+        "implements": "satisfies the contract"
+      }
     }
   },
   "challenge": {

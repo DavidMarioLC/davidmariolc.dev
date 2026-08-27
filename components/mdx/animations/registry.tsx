@@ -49,6 +49,13 @@ export function Skeleton() {
  * has a thin client wrapper.
  */
 export const animations: Record<string, ComponentType> = {
+  "dip-inverted-arrow": dynamic(
+    () => import("@/components/mdx/animations/dip-inverted-arrow"),
+    {
+      loading: () => <Skeleton />,
+      ssr: false,
+    }
+  ),
   "jwt-login": dynamic(() => import("@/components/mdx/animations/jwt-login"), {
     loading: () => <Skeleton />,
     ssr: false,
@@ -79,6 +86,13 @@ export const animations: Record<string, ComponentType> = {
   "module-federation-flow": dynamic(
     () => import("@/components/mdx/animations/module-federation-flow"),
     { loading: () => <Skeleton />, ssr: false }
+  ),
+  "srp-reasons-to-change": dynamic(
+    () => import("@/components/mdx/animations/srp-reasons-to-change"),
+    {
+      loading: () => <Skeleton />,
+      ssr: false,
+    }
   ),
 };
 

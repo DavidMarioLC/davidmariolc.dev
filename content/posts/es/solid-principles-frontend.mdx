@@ -1,0 +1,158 @@
+---
+title: Los principios SOLID en el frontend
+description: 'Las cinco letras de SOLID, una por una, contadas por el problema que cada una resuelve en un frontend real: qué se rompe exactamente cuando el principio no está.'
+date: 2025-03-16
+draft: false
+tags:
+  - solid
+  - arquitectura
+  - react
+---
+
+¿Alguna vez has cambiado una línea de un componente y has acabado tocando otros cuatro archivos que no tenían nada que ver con lo que te pidieron? Hoy vamos a recorrer las cinco letras de SOLID en su orden, una por sección, pero al revés de como suelen contarse: primero te enseño el código que duele, y el nombre del principio llega al final, cuando ya has visto qué se rompe sin él. El ejemplo va a ser **Nébula**, una tienda online inventada. Vamos despacio: cada letra es un problema concreto, no una definición.
+
+## Cinco reglas sobre dónde poner las costuras
+
+SOLID es un acrónimo que agrupa cinco principios de diseño formulados alrededor del año 2000 por Robert C. Martin, pensados para código orientado a objetos: clases, herencia e interfaces. Un frontend moderno tiene pocas clases —tiene funciones, componentes y módulos—, así que la traducción no es literal y conviene ser preciso con qué es lo que los cinco regulan de verdad.
+
+Regulan dónde va la **costura**: el punto por el que el código se separa en dos partes que a partir de ahí cambian por separado. El enemigo común de los cinco es el **acoplamiento**: dos piezas están acopladas cuando cambiar una te obliga a cambiar la otra. No se mide en líneas ni en carpetas, sino en cuántos archivos abres para hacer un cambio que conceptualmente era uno solo.
+
+Cada letra responde a una pregunta distinta sobre esa costura:
+
+| Letra | Principio | La pregunta que responde |
+| :---: | :--- | :--- |
+| S | Responsabilidad única | ¿Por qué razones cambia este archivo? |
+| O | Abierto/cerrado | ¿Por dónde entra un caso nuevo? |
+| L | Sustitución de Liskov | ¿Puedo cambiar esta pieza por otra del mismo tipo? |
+| I | Segregación de interfaces | ¿Cuánto tengo que saber para usar esto? |
+| D | Inversión de dependencias | ¿Quién nombra a quién? |
+
+Ninguna se aplica preventivamente. Las cinco son respuestas a un síntoma que aparece antes.
+
+## El archivo que cambian tres equipos distintos
+
+En Nébula hay un componente `OrderTable` que pinta la tabla de pedidos. Dentro hace cuatro cosas: pide los pedidos al servidor, los filtra por estado, formatea los importes según las reglas de facturación y devuelve el JSX. Mientras funcione, nada de eso parece un problema; el problema aparece en quién pide los cambios:
+
+1. **El equipo de backend cambia el endpoint.** Hay que abrir `OrderTable`.
+2. **Diseño cambia el orden de las columnas.** Hay que abrir `OrderTable`.
+3. **Facturación cambia cómo se redondea el IVA.** Hay que abrir `OrderTable`.
+
+Tres grupos de personas que no hablan entre sí editando el mismo archivo la misma semana: conflictos de merge en cada rama, y un test del redondeo que no puedes escribir sin levantar un servidor falso, porque la función que redondea vive dentro de un componente que hace fetch.
+
+La costura que falta separa esas tres razones de cambio:
+
+```tsx title="components/orders/order-table.tsx"
+// Un hook para los datos: cambia cuando cambia el servidor.
+const { orders } = useOrders();
+
+// Una función pura para el dinero: cambia cuando cambia facturación.
+const total = formatAmount(order.total);
+
+// Y el componente, que solo pinta: cambia cuando cambia diseño.
+return <table>{/* … */}</table>;
+```
+
+Esto es el **principio de responsabilidad única**, y su formulación popular —"cada función hace una sola cosa"— es la menos útil de las posibles. La original habla de tener **una sola razón para cambiar**, y una razón es un grupo de personas que pide cambios. Un archivo que orquesta diez llamadas del checkout tiene una sola responsabilidad si todas cambian por el mismo motivo; el `OrderTable` de arriba tenía tres aunque cupiera en una pantalla.
+
+<ConceptAnimation id="srp-reasons-to-change" />
+
+## El `switch` que hay que abrir cada vez que llega un caso nuevo
+
+Nébula pinta el estado de cada pedido con una etiqueta de color, y el componente resuelve el color con un `switch` de cuatro ramas: pendiente, pagado, enviado, entregado.
+
+Entonces producto añade los reembolsos. Para pintar el quinto estado hay que abrir el archivo, añadir una rama y republicar un componente que llevaba meses funcionando. Ese es el coste real: cada caso nuevo te obliga a editar código probado y en producción, y a arriesgar los cuatro casos que ya iban bien por un fallo en el quinto.
+
+La alternativa es que añadir un estado sea añadir un dato, no una rama:
+
+```tsx title="components/orders/status-badge.tsx"
+const badgeByStatus: Record<OrderStatus, BadgeStyle> = {
+  pending: { label: "Pendiente", tone: "neutral" },
+  paid: { label: "Pagado", tone: "accent" },
+  shipped: { label: "Enviado", tone: "accent" },
+  delivered: { label: "Entregado", tone: "muted" },
+  refunded: { label: "Reembolsado", tone: "warning" }, // [!code ++]
+};
+```
+
+El componente que lee ese mapa no se toca nunca más. Esto es el **principio abierto/cerrado**: abierto a extensión —caben casos nuevos— y cerrado a modificación —el código que ya funciona no se edita para meterlos.
+
+<Callout type="warning" title="Cerrado no significa intocable">
+  Un componente no puede estar cerrado a todos los cambios imaginables a la vez. Se elige **un** eje de crecimiento —el que ya has visto crecer dos veces— y se abre solo ese. Prever puntos de extensión en todas partes es código más difícil de leer para absorber cambios que no llegan nunca.
+</Callout>
+
+## La pieza que dice ser un botón y no lo es
+
+En Nébula alguien crea `IconButton` para tener botones con icono. Por dentro, en vez de un `<button>`, renderiza un `<div>` con un `onClick` encima. Se ve idéntico.
+
+Y entonces empiezan los fallos raros. Dentro de un formulario no envía nada, porque solo un `<button>` de verdad tiene el `type="submit"` que dispara el envío. No se llega a él con el tabulador, porque un `<div>` no está en el orden de foco. Su prop `disabled` lo pinta en gris, pero el `onClick` sigue disparando. Quien lo usó no leyó su código: leyó su nombre y asumió el contrato de un botón.
+
+Eso es lo que rompe el **principio de sustitución de Liskov**: si una pieza se presenta como algo, quien la usa tiene que poder cambiar una por otra sin leer por dentro ni añadir excepciones. Y el contrato de un botón en el navegador no son solo sus props: incluye su comportamiento con el teclado, con los formularios y con los lectores de pantalla. La regla práctica es envolver el elemento nativo y reenviarle el contrato en vez de reinventarlo:
+
+```tsx title="components/ui/icon-button.tsx"
+type IconButtonProps = ComponentProps<"button"> & { icon: ReactNode };
+
+export function IconButton({ icon, ...props }: IconButtonProps) {
+  return <button {...props}>{icon}</button>;
+}
+```
+
+TypeScript comprueba la forma de las props, nunca el comportamiento: que `IconButton` acepte `onClick` no dice nada sobre si funciona con el teclado. Eso solo lo garantiza apoyarse en el elemento que ya lo hace.
+
+## Veintidós props para pintar tres filas
+
+El equipo de plataforma de Nébula construye un `DataTable` común que con el tiempo acumula veintidós props: paginación en servidor, exportación a CSV, selección múltiple, virtualización, edición en línea. Cada una la pidió un equipo distinto y todas están justificadas.
+
+El coste lo paga quien solo quiere pintar tres filas: hay que leerse las veintidós props para decidir cuáles no aplican, y el tipo obliga a cada consumidor a conocer conceptos —`serverPagination`, `onExport`— que en su pantalla no existen. Cuando facturación añade la prop veintitrés, el archivo que cambia es el que importan las quince pantallas del producto.
+
+El **principio de segregación de interfaces** dice justamente eso: nadie debería depender de partes de una interfaz que no usa. En el frontend la interfaz de un componente son sus props, y la salida no es partirlo en quince, sino exponer piezas pequeñas que se componen.
+
+```tsx
+<Table>
+  <Table.Header columns={columns} />
+  <Table.Body rows={rows} />
+</Table>
+```
+
+Quien necesita exportar a CSV compone además la pieza que exporta; quien no, nunca se entera de que existe.
+
+## El componente que sabe de dónde salen los datos
+
+Última letra, y la que más cambia la forma del proyecto. `OrderList` importa el cliente de base de datos directamente:
+
+```tsx title="components/orders/order-list.tsx"
+import { supabase } from "@/lib/supabase";
+
+const { data } = await supabase.from("orders").select("*");
+```
+
+La pantalla de pedidos es de lo más estable del producto: lleva dos años pintando pedidos y seguirá haciéndolo. El cliente de base de datos es de lo más volátil: se cambia de proveedor, se mete una caché, se pasa por una API propia. Con ese `import`, lo estable nombra a lo volátil, y el día del cambio hay que abrir todas las pantallas. De paso, testear `OrderList` obliga a interceptar un módulo de terceros.
+
+El **principio de inversión de dependencias** invierte quién nombra a quién. La pantalla declara qué necesita, en sus propios términos, y el detalle se adapta a ese contrato:
+
+```ts title="lib/orders/repository.ts"
+export type OrderRepository = {
+  list(): Promise<Order[]>;
+};
+```
+
+`OrderList` recibe algo que cumpla `OrderRepository` —por props, por contexto o por un parámetro— y deja de saber que Supabase existe. La flecha se ha dado la vuelta: antes el componente dependía del proveedor, ahora el proveedor depende de un contrato que define el componente. Lo importante no es haber escrito un tipo, sino de quién es: lo define quien lo consume, no quien lo implementa.
+
+<ConceptAnimation id="dip-inverted-arrow" />
+
+## Las cinco letras de un vistazo
+
+| Letra | Síntoma en el código | Dónde pones la costura | Qué dejas de tocar |
+| :---: | :--- | :--- | :--- |
+| S | Tres equipos editan el mismo archivo | Entre datos, reglas y pintado | El componente, cuando cambia el servidor |
+| O | Un `switch` que crece con cada caso | Entre la tabla de casos y el que la lee | El código probado, al añadir un caso |
+| L | Un envoltorio que rompe a quien lo usa | En el contrato del elemento nativo | Los formularios y el teclado |
+| I | Veintidós props para tres filas | Entre las piezas que se componen | Las pantallas que no usan la prop nueva |
+| D | Un `import` de un proveedor concreto | En un contrato que define el consumidor | Las pantallas, al cambiar de proveedor |
+
+La columna que importa es la primera. SOLID no es una lista de cosas que hacer antes de escribir código: es un diccionario que traduce un dolor que ya estás sintiendo al nombre de la costura que te falta. Sin ninguno de esos síntomas, aplicar los cinco principios solo te deja indirección.
+
+## Dos minutos en tu propio proyecto
+
+Abre el componente más largo que tengas y responde tres preguntas sin cambiar nada. ¿Cuántos grupos distintos de personas pueden pedir un cambio en ese archivo? ¿Qué tendrías que editar para añadir un caso más al comportamiento que más crece? ¿Cuántos de sus `import` nombran a un proveedor concreto en vez de a un contrato tuyo?
+
+La respuesta a la primera te dice si te falta la S, la segunda si te falta la O y la tercera si te falta la D. Empieza por la que te haya salido peor, y solo por esa.

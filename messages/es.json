@@ -376,6 +376,70 @@
         "mounted": "<Summary /> montado",
         "seam": "misma página, mismo DOM, sin costura"
       }
+    },
+    "srpReasonsToChange": {
+      "title": "Tres razones para cambiar el mismo archivo",
+      "description": "Backend, facturación y diseño editan el mismo componente OrderTable; al partirlo en tres piezas, cada cambio deja de tocar a las otras dos.",
+      "steps": {
+        "endpoint": "El equipo de backend cambia el endpoint de pedidos. Para eso hay que abrir OrderTable, porque la llamada al servidor vive dentro.",
+        "pileUp": "Facturación cambia el redondeo y diseño cambia las columnas. Los tres cambios aterrizan en el mismo archivo, y ninguno tiene que ver con los otros.",
+        "conflict": "Tres equipos editando el mismo archivo la misma semana es un conflicto de merge por rama, y un test del redondeo que no se puede escribir sin levantar un servidor falso.",
+        "split": "La costura separa las tres razones: los datos en un hook, las reglas de dinero en una función pura y el pintado en el componente.",
+        "isolated": "Llega otro cambio del servidor y solo abre useOrders. Las reglas de dinero y el pintado ni se enteran: eso es tener una sola razón para cambiar."
+      },
+      "actors": {
+        "backend": "Backend",
+        "billing": "Facturación",
+        "design": "Diseño"
+      },
+      "actorsMeta": {
+        "backend": "cambia el endpoint",
+        "billing": "cambia el redondeo",
+        "design": "cambia las columnas"
+      },
+      "nodes": {
+        "table": "OrderTable",
+        "tableMeta": "fetch · formato · pintado"
+      },
+      "pieces": {
+        "data": "useOrders()",
+        "money": "formatAmount()",
+        "view": "OrderTable"
+      },
+      "piecesMeta": {
+        "data": "los datos",
+        "money": "las reglas de dinero",
+        "view": "el pintado"
+      },
+      "badges": {
+        "edited": "se edita",
+        "reasons": "3 razones para cambiar",
+        "conflict": "conflictos de merge"
+      }
+    },
+    "dipInvertedArrow": {
+      "title": "La flecha de dependencia dándose la vuelta",
+      "description": "Tres pantallas importan el cliente de base de datos directamente; al introducir un contrato que definen ellas, la flecha del proveedor se gira hacia ese contrato.",
+      "steps": {
+        "importing": "OrderList importa el cliente de Supabase y lo llama. La pantalla, que es lo estable, nombra al proveedor, que es lo volátil.",
+        "everyScreen": "No es una pantalla: todas hacen lo mismo. Cada una guarda dentro el nombre del proveedor concreto.",
+        "swap": "El día que cambias de proveedor, metes una caché o pasas por tu propia API, hay que abrir las tres. El detalle volátil está escrito en todas partes.",
+        "contract": "La costura es un contrato: OrderRepository dice qué necesita la pantalla, en los términos de la pantalla. Cada una define el suyo.",
+        "invert": "Supabase pasa a cumplir ese contrato. Las dos flechas apuntan al medio: ya nadie nombra al proveedor, y cambiarlo no abre ninguna pantalla."
+      },
+      "nodes": {
+        "orderList": "OrderList",
+        "invoiceList": "InvoiceList",
+        "customerList": "CustomerList",
+        "contract": "OrderRepository",
+        "contractMeta": "list(): Order[]",
+        "supabase": "Supabase"
+      },
+      "badges": {
+        "import": "@/lib/supabase",
+        "swap": "cambias de proveedor",
+        "implements": "cumple el contrato"
+      }
     }
   },
   "challenge": {

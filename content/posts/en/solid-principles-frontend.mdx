@@ -1,0 +1,158 @@
+---
+title: The SOLID principles in the frontend
+description: 'The five letters of SOLID, one at a time, told through the problem each one solves in a real frontend: what exactly breaks when the principle is missing.'
+date: 2025-03-16
+draft: false
+tags:
+  - solid
+  - architecture
+  - react
+---
+
+Have you ever changed one line in a component and ended up touching four other files that had nothing to do with what you were asked for? Today we're walking through the five letters of SOLID in order, one per section, but backwards from how they're usually told: first you see the code that hurts, and the name of the principle arrives at the end, once you've watched things break without it. The example is **Nébula**, a made-up online store. We'll go slowly: every letter is a concrete problem, not a definition.
+
+## Five rules about where to put the seams
+
+SOLID is an acronym for five design principles formulated around the year 2000 by Robert C. Martin, aimed at object-oriented code: classes, inheritance and interfaces. A modern frontend has few classes —it has functions, components and modules— so the translation isn't literal, and it pays to be precise about what the five actually govern.
+
+They govern where the **seam** goes: the point where code splits into two parts that from then on change separately. The shared enemy of all five is **coupling**: two pieces are coupled when changing one forces you to change the other. It isn't measured in lines or folders, but in how many files you open to make a change that was conceptually a single one.
+
+Each letter answers a different question about that seam:
+
+| Letter | Principle | The question it answers |
+| :---: | :--- | :--- |
+| S | Single responsibility | What reasons make this file change? |
+| O | Open/closed | Where does a new case go in? |
+| L | Liskov substitution | Can I swap this piece for another of the same type? |
+| I | Interface segregation | How much do I need to know to use this? |
+| D | Dependency inversion | Who names whom? |
+
+None of them is applied preventively. All five are answers to a symptom that shows up first.
+
+## The file three different teams edit
+
+Nébula has an `OrderTable` component that renders the orders table. Inside, it does four things: it fetches the orders from the server, filters them by status, formats the amounts according to the billing rules and returns the JSX. As long as it works, none of that looks like a problem; the problem is in who asks for the changes:
+
+1. **Backend changes the endpoint.** You open `OrderTable`.
+2. **Design changes the column order.** You open `OrderTable`.
+3. **Billing changes how VAT is rounded.** You open `OrderTable`.
+
+Three groups of people who never talk to each other editing the same file in the same week: merge conflicts on every branch, and a rounding test you can't write without spinning up a fake server first, because the function that rounds lives inside a component that fetches.
+
+The missing seam separates those three reasons to change:
+
+```tsx title="components/orders/order-table.tsx"
+// A hook for the data: changes when the server changes.
+const { orders } = useOrders();
+
+// A pure function for the money: changes when billing changes.
+const total = formatAmount(order.total);
+
+// And the component, which only renders: changes when design changes.
+return <table>{/* … */}</table>;
+```
+
+This is the **single responsibility principle**, and its popular phrasing —"every function does one thing"— is the least useful one available. The original talks about having **a single reason to change**, and a reason is a group of people who ask for changes. A file that orchestrates ten checkout calls has one responsibility if they all change for the same motive; the `OrderTable` above had three even though it fit on one screen.
+
+<ConceptAnimation id="srp-reasons-to-change" />
+
+## The `switch` you have to open for every new case
+
+Nébula renders each order's status as a colored badge, and the component resolves the color with a four-branch `switch`: pending, paid, shipped, delivered.
+
+Then product adds refunds. To render the fifth status you have to open the file, add a branch and republish a component that had been working for months. That's the real cost: every new case forces you to edit tested code that is already in production, and to risk the four cases that worked over a bug in the fifth.
+
+The alternative is that adding a status means adding data, not a branch:
+
+```tsx title="components/orders/status-badge.tsx"
+const badgeByStatus: Record<OrderStatus, BadgeStyle> = {
+  pending: { label: "Pending", tone: "neutral" },
+  paid: { label: "Paid", tone: "accent" },
+  shipped: { label: "Shipped", tone: "accent" },
+  delivered: { label: "Delivered", tone: "muted" },
+  refunded: { label: "Refunded", tone: "warning" }, // [!code ++]
+};
+```
+
+The component that reads that map is never touched again. This is the **open/closed principle**: open to extension —new cases fit— and closed to modification —working code isn't edited to fit them in.
+
+<Callout type="warning" title="Closed doesn't mean untouchable">
+  A component can't be closed to every imaginable change at once. You pick **one** axis of growth —the one you've already watched grow twice— and open only that one. Anticipating extension points everywhere is code that's harder to read in exchange for changes that never arrive.
+</Callout>
+
+## The piece that claims to be a button and isn't
+
+Someone at Nébula creates `IconButton` so there are buttons with icons. Inside, instead of a `<button>`, it renders a `<div>` with an `onClick` on top. It looks identical.
+
+Then the strange failures start. Inside a form it submits nothing, because only a real `<button>` carries the `type="submit"` that fires the submission. You can't reach it with the tab key, because a `<div>` isn't in the focus order. Its `disabled` prop paints it grey, but the `onClick` still fires. Whoever used it didn't read its code: they read its name and assumed a button's contract.
+
+That's what breaks the **Liskov substitution principle**: if a piece presents itself as something, whoever uses it has to be able to swap one for another without reading the internals or adding exceptions. And a button's contract in the browser isn't just its props: it includes its behavior with the keyboard, with forms and with screen readers. The practical rule is to wrap the native element and forward its contract instead of reinventing it:
+
+```tsx title="components/ui/icon-button.tsx"
+type IconButtonProps = ComponentProps<"button"> & { icon: ReactNode };
+
+export function IconButton({ icon, ...props }: IconButtonProps) {
+  return <button {...props}>{icon}</button>;
+}
+```
+
+TypeScript checks the shape of the props, never the behavior: that `IconButton` accepts `onClick` says nothing about whether it works with the keyboard. Only leaning on the element that already does guarantees that.
+
+## Twenty-two props to render three rows
+
+Nébula's platform team builds a shared `DataTable` that over time accumulates twenty-two props: server pagination, CSV export, multiple selection, virtualization, inline editing. Each one was asked for by a different team and all of them are justified.
+
+The cost is paid by whoever only wants to render three rows: you have to read all twenty-two props to decide which ones don't apply, and the type forces every consumer to know about concepts —`serverPagination`, `onExport`— that don't exist on their screen. When billing adds prop twenty-three, the file that changes is the one imported by fifteen screens.
+
+The **interface segregation principle** says exactly that: nobody should depend on parts of an interface they don't use. In the frontend a component's interface is its props, and the way out isn't splitting it into fifteen components, but exposing small pieces that compose.
+
+```tsx
+<Table>
+  <Table.Header columns={columns} />
+  <Table.Body rows={rows} />
+</Table>
+```
+
+Whoever needs CSV export also composes the piece that exports; whoever doesn't never learns it exists.
+
+## The component that knows where the data comes from
+
+Last letter, and the one that changes the shape of a project the most. `OrderList` imports the database client directly:
+
+```tsx title="components/orders/order-list.tsx"
+import { supabase } from "@/lib/supabase";
+
+const { data } = await supabase.from("orders").select("*");
+```
+
+The orders screen is about as stable as the product gets: it has been rendering orders for two years and it will keep doing so. The database client is about as volatile as it gets: providers get swapped, a cache gets added, it moves behind your own API. With that `import`, the stable thing names the volatile one, and on the day of the change you have to open every screen. On top of that, testing `OrderList` means intercepting a third-party module.
+
+The **dependency inversion principle** flips who names whom. The screen declares what it needs, in its own terms, and the detail adapts to that contract:
+
+```ts title="lib/orders/repository.ts"
+export type OrderRepository = {
+  list(): Promise<Order[]>;
+};
+```
+
+`OrderList` receives something that satisfies `OrderRepository` —through props, context or a parameter— and stops knowing that Supabase exists. The arrow has flipped: the component used to depend on the provider, now the provider depends on a contract the component defines. What matters isn't having written a type, it's whose type it is: it's defined by whoever consumes it, not by whoever implements it.
+
+<ConceptAnimation id="dip-inverted-arrow" />
+
+## The five letters at a glance
+
+| Letter | Symptom in the code | Where the seam goes | What you stop touching |
+| :---: | :--- | :--- | :--- |
+| S | Three teams edit the same file | Between data, rules and rendering | The component, when the server changes |
+| O | A `switch` that grows with every case | Between the case table and its reader | Tested code, when adding a case |
+| L | A wrapper that breaks its callers | In the native element's contract | Forms and the keyboard |
+| I | Twenty-two props for three rows | Between the pieces that compose | Screens that don't use the new prop |
+| D | An `import` of a concrete provider | In a contract the consumer defines | Every screen, when the provider changes |
+
+The column that matters is the first one. SOLID isn't a list of things to do before writing code: it's a dictionary that translates a pain you're already feeling into the name of the seam you're missing. Without any of those symptoms, applying all five principles only leaves you with indirection.
+
+## Two minutes in your own project
+
+Open the longest component you have and answer three questions without changing anything. How many different groups of people can ask for a change in that file? What would you have to edit to add one more case to the behavior that grows the most? How many of its `import` lines name a concrete provider instead of a contract of your own?
+
+The answer to the first tells you whether the S is missing, the second the O and the third the D. Start with whichever came out worst, and only with that one.
