@@ -246,6 +246,136 @@
         "stateful": "1 lectura por petición",
         "tradeoff": "ventana sin estado   vs   revocación inmediata"
       }
+    },
+    "microFrontendsDeployCoupling": {
+      "title": "Cinco equipos atados al mismo despliegue",
+      "description": "Cinco equipos de una tienda comparten un solo build: un cambio en uno recompila a los cinco, un test rojo bloquea a todos y una vuelta atrás los revierte a todos.",
+      "steps": {
+        "change": "Solo el equipo del buscador tocó código. Los otros cuatro llevan semanas sin cambiar nada.",
+        "rebuild": "Como las cinco piezas se compilan juntas, el build vuelve a construir las cinco. Cuatro equipos entran en la versión sin haber pedido nada.",
+        "publish": "Lo que sale a producción es un único paquete con las cinco piezas dentro. No hay forma de publicar solo una.",
+        "blocked": "Los tests del carrito fallan y el build entero se detiene. El buscador tenía su cambio listo y tampoco sale.",
+        "rollback": "Revertir el fallo del carrito devuelve el build anterior, y con él el trabajo de los otros cuatro equipos."
+      },
+      "teams": {
+        "home": "Equipo home",
+        "search": "Equipo buscador",
+        "catalog": "Equipo catálogo",
+        "cart": "Equipo carrito",
+        "account": "Equipo cuenta"
+      },
+      "nodes": {
+        "build": "Un solo build",
+        "buildMeta": "compila las 5 piezas",
+        "production": "Producción",
+        "productionMeta": "una sola versión"
+      },
+      "badges": {
+        "changed": "modificado",
+        "rebuilt": "recompilado",
+        "failing": "tests rojos",
+        "blocked": "nadie publica",
+        "reverted": "revertido",
+        "shipped": "5 piezas nuevas"
+      }
+    },
+    "microFrontendsSpectrum": {
+      "title": "El espectro: cuándo se unen las piezas",
+      "description": "Eje con los cuatro momentos en que las piezas de un frontend repartido pueden unirse, y las herramientas y el coste de cada uno.",
+      "steps": {
+        "axis": "Todas las soluciones responden a la misma pregunta, y solo cambian en cuándo se unen las piezas. Ese es el eje entero.",
+        "never": "En el extremo más barato las piezas no se unen nunca: son páginas distintas y el contrato es un enlace. Pagas una recarga completa al saltar de una a otra.",
+        "build": "Un paso más allá, cada pieza se publica como paquete y el contenedor las compila juntas. Vuelves a necesitar un build del contenedor por cada cambio.",
+        "server": "En el servidor, cada pieza responde con su HTML y algo lo cose antes de enviarlo. La página llega montada, pero cada visita cuesta tráfico entre servicios.",
+        "browser": "En el navegador, el contenedor carga cada pieza en marcha. Es el único punto donde publicas sin que nadie recompile, y a cambio todo se comprueba en producción.",
+        "tradeoff": "Cuanto más tarde se unen, más independiente es cada equipo y menos queda comprobado antes de que la página llegue al usuario."
+      },
+      "axis": {
+        "question": "¿cuándo se unen las piezas?",
+        "early": "antes",
+        "late": "después"
+      },
+      "headings": {
+        "tools": "herramientas",
+        "price": "qué pagas"
+      },
+      "trade": {
+        "independence": "independencia de cada equipo",
+        "checks": "comprobado antes de publicar"
+      },
+      "columns": {
+        "never": {
+          "title": "Nunca",
+          "contract": "contrato: una URL",
+          "tool1": "proxy inverso",
+          "tool2": "",
+          "tool3": "",
+          "tool4": "",
+          "price1": "recarga de página",
+          "price2": "al cambiar de pieza"
+        },
+        "build": {
+          "title": "En el build",
+          "contract": "versión de paquete",
+          "tool1": "pnpm workspaces",
+          "tool2": "Bit",
+          "tool3": "",
+          "tool4": "",
+          "price1": "recompilar el",
+          "price2": "contenedor cada vez"
+        },
+        "server": {
+          "title": "En el servidor",
+          "contract": "fragmento de HTML",
+          "tool1": "Nginx SSI",
+          "tool2": "Tailor · Podium",
+          "tool3": "Next.js Multi-Zones",
+          "tool4": "",
+          "price1": "latencia entre",
+          "price2": "servicios por visita"
+        },
+        "browser": {
+          "title": "En el navegador",
+          "contract": "un módulo en una URL",
+          "tool1": "iframes",
+          "tool2": "Web Components",
+          "tool3": "single-spa",
+          "tool4": "Module Federation",
+          "price1": "versiones y contratos",
+          "price2": "atados en producción"
+        }
+      }
+    },
+    "moduleFederationFlow": {
+      "title": "Cómo un bundle importa un módulo de otro bundle",
+      "description": "Flujo de Module Federation: el remote publica un manifiesto, el host guarda solo su URL y el navegador une las dos piezas al vuelo.",
+      "steps": {
+        "expose": "El equipo del carrito compila su pieza y publica, junto a sus archivos, un manifiesto que dice qué módulos ofrece y dónde está cada uno.",
+        "reference": "El host se compila otro día y en otra máquina. Dentro de su bundle no va el código del carrito: va la URL donde buscarlo.",
+        "boot": "El usuario abre la página y solo se descarga el host. Del carrito todavía no ha llegado ni un byte.",
+        "fetch": "Cuando toca pintar el carrito, el navegador pide el manifiesto y descubre en ese momento qué archivo tiene que descargar.",
+        "shared": "Antes de bajar nada más, host y remote comparan sus librerías compartidas. Si la versión de React del host le sirve al carrito, el carrito reutiliza esa instancia.",
+        "mount": "El código del carrito se ejecuta dentro de la misma página que el host: mismo documento, mismo DOM. Publicarlo no obligó a recompilar el host."
+      },
+      "nodes": {
+        "remoteBuild": "Build del carrito (remote)",
+        "remoteBuildMeta": "lo compila su equipo",
+        "manifestMeta": "manifiesto publicado",
+        "hostBuild": "Build de la home (host)",
+        "hostBuildMeta": "solo guarda la URL",
+        "hostBundle": "Bundle del host",
+        "hostBundleMeta": "0 KB de código del carrito",
+        "browser": "Navegador"
+      },
+      "labels": {
+        "separateBuilds": "builds que nunca se ven"
+      },
+      "badges": {
+        "hostRunning": "host en ejecución",
+        "shared": "shared: react 19 · singleton · reutiliza la del host",
+        "mounted": "<Summary /> montado",
+        "seam": "misma página, mismo DOM, sin costura"
+      }
     }
   },
   "challenge": {

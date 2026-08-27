@@ -68,6 +68,18 @@ export const animations: Record<string, ComponentType> = {
     () => import("@/components/mdx/animations/jwt-validation"),
     { loading: () => <Skeleton />, ssr: false }
   ),
+  "micro-frontends-deploy-coupling": dynamic(
+    () => import("@/components/mdx/animations/micro-frontends-deploy-coupling"),
+    { loading: () => <Skeleton />, ssr: false }
+  ),
+  "micro-frontends-spectrum": dynamic(
+    () => import("@/components/mdx/animations/micro-frontends-spectrum"),
+    { loading: () => <Skeleton />, ssr: false }
+  ),
+  "module-federation-flow": dynamic(
+    () => import("@/components/mdx/animations/module-federation-flow"),
+    { loading: () => <Skeleton />, ssr: false }
+  ),
 };
 
 export type AnimationId = keyof typeof animations;

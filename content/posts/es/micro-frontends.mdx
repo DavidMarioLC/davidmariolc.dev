@@ -1,0 +1,108 @@
+---
+title: Arquitectura de micro frontends
+description: 'Por qué un frontend se parte en piezas, qué espectro de soluciones aparece cuando lo haces y cómo funciona por dentro el extremo más flexible de ese espectro.'
+date: 2025-02-19
+draft: false
+tags:
+  - micro-frontends
+  - arquitectura
+  - module-federation
+---
+
+¿Alguna vez has abierto una pantalla y te has preguntado si el buscador, el catálogo y el carrito que estás viendo los mantiene la misma gente? Hoy vamos a recorrer entero el camino que lleva de un frontend único a uno repartido: el problema que empuja a partirlo, el espectro de soluciones que aparece en cuanto lo intentas y qué herramienta vive en cada punto. El ejemplo va a ser **Nébula**, una tienda online inventada con cinco equipos dentro. Cada tramo primero te lo cuento y después lo ves animado.
+
+Conviene ser preciso con qué es lo que se parte, porque casi todo lo que uno cree que hay que partir ya se puede partir: el código se reparte en carpetas hoy mismo, los equipos y los repositorios también, y nada de eso cambia el problema. Lo que un micro frontend parte de verdad es la **unidad de despliegue**: el conjunto de archivos que se compilan juntos y se publican juntos, de modo que nadie puede publicar la mitad.
+
+Cualquier forma de partirla se define respondiendo a tres preguntas:
+
+| Pregunta | Qué decide |
+| :--- | :--- |
+| ¿Quién compila cada pieza? | Si un equipo necesita el código de otro para construir la suya |
+| ¿Cuándo se unen las piezas? | Si un equipo necesita esperar a otro para publicar |
+| ¿Qué contrato hay entre ellas? | Qué se rompe cuando una pieza cambia sin avisar |
+
+La segunda es la que genera el espectro entero. Guárdala.
+
+## Cinco equipos esperando el mismo build
+
+En Nébula hay cinco equipos —home, buscador, catálogo, carrito y cuenta— y un solo frontend. Un empaquetador (la herramienta que lee todo el código fuente y produce los archivos que el navegador descarga) compila las cinco partes juntas y saca un único conjunto de archivos, que es lo que se publica.
+
+Mientras eso sea así, el pipeline de publicación es compartido, con consecuencias que no dependen de lo bien escrito que esté el código:
+
+1. **Nadie publica solo.** Un cambio de una línea en el buscador obliga a recompilar y republicar también el catálogo, el carrito y la cuenta, aunque lleven semanas sin tocarse.
+2. **El más lento marca el ritmo.** Si los tests de cualquiera de los cinco equipos están en rojo, los otros cuatro tampoco salen.
+3. **La vuelta atrás arrastra a todos.** Revertir un fallo del carrito revierte también lo que los otros cuatro publicaron en ese mismo build.
+4. **La versión de una librería es una negociación de cinco.** Como todo se compila junto, solo puede haber una versión de React, y subirla es un proyecto colectivo.
+
+<ConceptAnimation id="micro-frontends-deploy-coupling" />
+
+Lo que duele no es el tamaño del código: es que el momento de publicar sea compartido. Por eso el problema no aparece con un equipo por muy grande que sea la aplicación, y aparece con cinco por pequeña que sea. Los micro frontends resuelven un problema de organización que se manifiesta en el pipeline.
+
+## La salida más barata: dos aplicaciones y un enlace
+
+Si el problema es que se publican juntas, la solución más directa es que no se publiquen juntas, y la forma más barata es partir por URL: `nebula.com/tienda` es una aplicación completa y `nebula.com/cuenta` es otra, cada una con su repositorio, su empaquetador y su pipeline. Delante de las dos, un proxy inverso —un servidor que recibe todas las peticiones y decide a cuál de las dos se las manda— reparte según la ruta. El contrato entre ellas es un enlace.
+
+Esto no es un premio de consolación: resuelve el problema entero. Cada equipo publica cuando quiere y usa la versión de React que quiera, o incluso otro framework. El precio es igual de concreto: al cambiar de una a otra hay una recarga de página completa, no hay estado compartido en memoria y el navegador descarga dos veces las librerías comunes.
+
+Si tu producto tolera esa recarga, has terminado aquí. Queda un caso que no cubre: cuando dos piezas de dos equipos distintos tienen que estar **en la misma pantalla a la vez**, como el resumen del carrito flotando sobre la ficha del producto.
+
+## Cuando dos piezas comparten pantalla, la pregunta es cuándo se unen
+
+Si las piezas se compilan por separado pero aparecen juntas, alguien tiene que unirlas en algún momento. Ese momento es el eje del espectro, y solo hay tres sitios donde puede caer.
+
+1. **En el build.** Cada equipo publica su pieza como un paquete versionado y una aplicación contenedora los instala y lo compila todo junto. Las herramientas son las de siempre: los workspaces de pnpm, o Bit para publicar componentes uno a uno. El coste es que devuelve parte del problema — para que una versión nueva del carrito llegue al usuario hay que recompilar el contenedor. Ese equipo recupera su repositorio, pero no su pipeline.
+2. **En el servidor.** Cada pieza es un servicio que responde con su fragmento de HTML, y algo por delante los cose en un solo documento antes de mandarlo al navegador. Aquí viven las Server Side Includes de Nginx (una directiva que sustituye un comentario del HTML por la respuesta de otra URL), Tailor, Podium y las Multi-Zones de Next.js. El usuario recibe la página ya montada, lo cual es bueno para el primer pintado y para los buscadores; pagas tráfico entre servicios en cada visita, y una pieza lenta retrasa toda la página.
+3. **En el navegador.** El contenedor descarga el código de cada pieza cuando ya está en ejecución y lo monta dentro de la página. El abanico va del `iframe` —máximo aislamiento, mínima integración— a los Web Components, single-spa o Module Federation. Es el único punto donde el equipo del carrito publica archivos nuevos y el usuario los ve sin que nadie más recompile nada. Pagas que todo lo que antes comprobaba el empaquetador ahora ocurre en vivo: versiones de librerías, contratos entre piezas y errores que solo aparecen en producción.
+
+<ConceptAnimation id="micro-frontends-spectrum" />
+
+No hay un punto correcto en ese eje, hay un intercambio que se repite: cuanto más tarde se unen las piezas, más independiente es cada equipo y más trabajo queda sin comprobar hasta que la página ya está en manos del usuario.
+
+## El extremo del navegador, por dentro: Module Federation
+
+Vamos a bajar a uno de esos cuatro puntos y verlo por dentro. Elijamos, por ejemplo, el del navegador con Module Federation: no porque sea el mejor, sino porque es el que peor se entiende de oídas. Cualquiera de los otros tres daría un recorrido igual de concreto. La pregunta a responder es esta: ¿cómo importa un bundle —el conjunto de archivos que produce el empaquetador— un módulo de otro bundle compilado en otra máquina, en otro momento y publicado en otra URL?
+
+Module Federation es la respuesta que dan Webpack 5 y Rspack, y Vite mediante un plugin. Define dos papeles: el **host** es la aplicación contenedora y el **remote** es la pieza que se expone para que otros la usen. El equipo del carrito compila un remote; el de la home compila el host.
+
+El recorrido tiene cinco pasos, y los dos primeros ocurren en máquinas distintas y en días distintos:
+
+1. **El remote se compila declarando qué expone.** Además de sus archivos normales, el empaquetador genera un `remoteEntry.js`: un manifiesto, es decir, un archivo pequeño que dice qué módulos hay disponibles y en cuál de los archivos está cada uno.
+2. **El host se compila declarando de qué remotes depende** y en qué URL vive el manifiesto de cada uno. Dentro de su bundle no queda ni una línea del código del carrito: queda una instrucción de ir a buscarlo.
+3. **En el navegador, el host descarga `remoteEntry.js`** la primera vez que necesita pintar el carrito. Hasta ese momento no ha gastado ni un byte en él.
+4. **Los dos negocian las librerías compartidas.** Si el host ya tiene React cargado y esa versión le sirve al remote, el remote reutiliza la instancia en vez de descargar la suya.
+5. **Se descarga el código del carrito y se ejecuta dentro de la misma página**: mismo documento, mismo DOM, mismo runtime de React. Para el usuario no hay ninguna costura.
+
+<ConceptAnimation id="module-federation-flow" />
+
+Así se ve el paso 1, en la configuración del remote, que es donde se decide qué sale al mundo:
+
+```ts title="rspack.config.ts (equipo carrito)"
+new ModuleFederationPlugin({
+  name: "cart",
+  filename: "remoteEntry.js",
+  exposes: { "./Summary": "./src/summary.tsx" },
+  shared: { react: { singleton: true, requiredVersion: "^19.0.0" } },
+});
+```
+
+`exposes` es la lista de puertas de salida: solo esos módulos son alcanzables desde fuera, y su nombre público (`./Summary`) no depende de dónde esté el archivo. `shared` lista las librerías que no tiene sentido duplicar, y `singleton: true` significa "una sola instancia de React en la página pase lo que pase" — sin eso, dos copias conviviendo rompen los hooks. El host declara lo simétrico: una entrada `remotes` con la URL del manifiesto, y a partir de ahí un `import("cart/Summary")` normal.
+
+<Callout type="warning" title="Publicar sin recompilar es también romper sin recompilar">
+  El equipo del carrito puede quitar una propiedad obligatoria y publicar.
+  Ningún build falla, porque no hay ningún build donde las dos piezas
+  coincidan. Ese contrato se sostiene con tests de contrato y versionado del
+  manifiesto, no con TypeScript.
+</Callout>
+
+## El espectro completo, de un vistazo
+
+| Momento de unión | Contrato entre piezas | Herramientas | Qué pagas |
+| :--- | :--- | :--- | :--- |
+| Nunca: páginas separadas | una URL | proxy inverso | recarga completa al cambiar de pieza |
+| En el build | versión de un paquete | pnpm workspaces, Bit | recompilar el contenedor por cada cambio |
+| En el servidor | un fragmento de HTML | Nginx SSI, Tailor, Podium, Next.js Multi-Zones | latencia entre servicios en cada visita |
+| En el navegador | un módulo en una URL | iframes, Web Components, single-spa, Module Federation | versiones y contratos negociados en producción |
+
+La columna que importa es la última. Las cuatro filas resuelven el problema del principio —que cinco equipos compartan pipeline—, así que elegir no consiste en buscar la opción más potente, sino en mirar cuál de esos cuatro precios puedes pagar. Una tienda con secciones que casi no se hablan entre sí vive perfectamente en la primera fila; una que necesita el carrito visible en todas las pantallas acaba en la última.
+
+Para saber si algo de esto te hace falta, no mires el tamaño de tu repositorio: abre el historial de despliegues de la última semana y cuenta cuántos incluían cambios de más de un equipo. Si la respuesta es cero, tu unidad de despliegue ya está bien partida y no necesitas nada de este post.

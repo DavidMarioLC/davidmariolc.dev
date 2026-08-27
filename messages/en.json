@@ -246,6 +246,136 @@
         "stateful": "1 read per request",
         "tradeoff": "stateless window   vs   instant revocation"
       }
+    },
+    "microFrontendsDeployCoupling": {
+      "title": "Five teams tied to the same release",
+      "description": "Five teams of one store share a single build: a change in one rebuilds all five, a red test blocks everyone, and a rollback reverts them all.",
+      "steps": {
+        "change": "Only the search team touched any code. The other four haven't changed a thing in weeks.",
+        "rebuild": "Because the five pieces are built together, the build reconstructs all five. Four teams end up in the release without asking for it.",
+        "publish": "What reaches production is one package with the five pieces inside. There's no way to publish just one.",
+        "blocked": "The cart's tests fail and the whole build stops. Search had its change ready and it doesn't ship either.",
+        "rollback": "Reverting the cart bug brings back the previous build, and with it the other four teams' work."
+      },
+      "teams": {
+        "home": "Home team",
+        "search": "Search team",
+        "catalog": "Catalogue team",
+        "cart": "Cart team",
+        "account": "Account team"
+      },
+      "nodes": {
+        "build": "One single build",
+        "buildMeta": "builds all 5 pieces",
+        "production": "Production",
+        "productionMeta": "one single release"
+      },
+      "badges": {
+        "changed": "changed",
+        "rebuilt": "rebuilt",
+        "failing": "red tests",
+        "blocked": "nobody ships",
+        "reverted": "reverted",
+        "shipped": "5 new pieces"
+      }
+    },
+    "microFrontendsSpectrum": {
+      "title": "The spectrum: when the pieces come together",
+      "description": "An axis with the four moments at which the pieces of a distributed frontend can be joined, plus the tools and the cost of each one.",
+      "steps": {
+        "axis": "Every solution answers the same question and differs only in when the pieces are joined. That's the whole axis.",
+        "never": "At the cheapest end the pieces never join: they're separate pages and the contract is a link. You pay a full reload when you jump between them.",
+        "build": "One step further, each piece ships as a package and the container builds them together. You're back to needing a container build for every change.",
+        "server": "At the server, each piece answers with its own HTML and something stitches it before sending it out. The page arrives assembled, but every visit costs service-to-service traffic.",
+        "browser": "In the browser, the container loads each piece while running. It's the only point where you ship without anyone rebuilding, and in exchange everything gets checked in production.",
+        "tradeoff": "The later they join, the more independent each team is and the less gets checked before the page reaches the user."
+      },
+      "axis": {
+        "question": "when do the pieces join?",
+        "early": "earlier",
+        "late": "later"
+      },
+      "headings": {
+        "tools": "tools",
+        "price": "what you pay"
+      },
+      "trade": {
+        "independence": "independence of each team",
+        "checks": "checked before shipping"
+      },
+      "columns": {
+        "never": {
+          "title": "Never",
+          "contract": "contract: a URL",
+          "tool1": "reverse proxy",
+          "tool2": "",
+          "tool3": "",
+          "tool4": "",
+          "price1": "full page reload",
+          "price2": "on every switch"
+        },
+        "build": {
+          "title": "At build time",
+          "contract": "a package version",
+          "tool1": "pnpm workspaces",
+          "tool2": "Bit",
+          "tool3": "",
+          "tool4": "",
+          "price1": "rebuilding the",
+          "price2": "container every time"
+        },
+        "server": {
+          "title": "At the server",
+          "contract": "an HTML fragment",
+          "tool1": "Nginx SSI",
+          "tool2": "Tailor · Podium",
+          "tool3": "Next.js Multi-Zones",
+          "tool4": "",
+          "price1": "service-to-service",
+          "price2": "latency per visit"
+        },
+        "browser": {
+          "title": "In the browser",
+          "contract": "a module at a URL",
+          "tool1": "iframes",
+          "tool2": "Web Components",
+          "tool3": "single-spa",
+          "tool4": "Module Federation",
+          "price1": "versions and",
+          "price2": "contracts held live"
+        }
+      }
+    },
+    "moduleFederationFlow": {
+      "title": "How one bundle imports a module from another",
+      "description": "The Module Federation flow: the remote publishes a manifest, the host keeps only its URL, and the browser joins the two pieces on the fly.",
+      "steps": {
+        "expose": "The cart team builds its piece and publishes, alongside its files, a manifest saying which modules it offers and where each one lives.",
+        "reference": "The host is built another day on another machine. Its bundle doesn't carry the cart's code: it carries the URL where to find it.",
+        "boot": "The user opens the page and only the host is downloaded. Not a single byte of the cart has arrived yet.",
+        "fetch": "When it's time to render the cart, the browser asks for the manifest and only then finds out which file it has to download.",
+        "shared": "Before pulling anything else, host and remote compare their shared libraries. If the host's React version works for the cart, the cart reuses that instance.",
+        "mount": "The cart's code runs inside the same page as the host: same document, same DOM. Publishing it never forced the host to rebuild."
+      },
+      "nodes": {
+        "remoteBuild": "Cart build (remote)",
+        "remoteBuildMeta": "built by its own team",
+        "manifestMeta": "published manifest",
+        "hostBuild": "Home build (host)",
+        "hostBuildMeta": "keeps only the URL",
+        "hostBundle": "Host bundle",
+        "hostBundleMeta": "0 KB of the cart's code",
+        "browser": "Browser"
+      },
+      "labels": {
+        "separateBuilds": "builds that never meet"
+      },
+      "badges": {
+        "hostRunning": "host running",
+        "shared": "shared: react 19 · singleton · reuses the host's",
+        "mounted": "<Summary /> mounted",
+        "seam": "same page, same DOM, no seam"
+      }
     }
   },
   "challenge": {

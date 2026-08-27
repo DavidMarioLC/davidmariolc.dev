@@ -1,0 +1,107 @@
+---
+title: Micro frontend architecture
+description: 'Why a frontend gets split into pieces, the spectrum of solutions that appears when you do, and how the most flexible end of that spectrum works under the hood.'
+date: 2025-02-19
+draft: false
+tags:
+  - micro-frontends
+  - architecture
+  - module-federation
+---
+
+Have you ever opened a screen and wondered whether the search box, the catalogue and the cart you're looking at are maintained by the same people? Today we're going to walk the whole path from a single frontend to a distributed one: the problem that pushes you to split it, the spectrum of solutions that shows up the moment you try, and which tool lives at each point. The example is **Nébula**, a made-up online store with five teams inside it. Each stretch gets explained first and animated after.
+
+It's worth being precise about what actually gets split, because almost everything people think they need to split can be split already: code goes into separate folders today, so do teams and repositories, and none of that changes the problem. What a micro frontend really splits is the **deployment unit**: the set of files that are built together and published together, so that nobody can publish half of it.
+
+Every way of splitting it is defined by answering three questions:
+
+| Question | What it decides |
+| :--- | :--- |
+| Who builds each piece? | Whether a team needs another team's code to build its own |
+| When do the pieces come together? | Whether a team has to wait for another one to publish |
+| What contract sits between them? | What breaks when a piece changes without warning |
+
+The second one generates the entire spectrum. Hold on to it.
+
+## Five teams waiting on the same build
+
+Nébula has five teams —home, search, catalogue, cart and account— and one frontend. A bundler (the tool that reads all the source code and produces the files the browser downloads) builds the five parts together and emits a single set of files, and that set is what gets published.
+
+As long as that's true, the release pipeline is shared, with consequences that have nothing to do with how well the code is written:
+
+1. **Nobody ships alone.** A one-line change in search forces the catalogue, the cart and the account to be rebuilt and republished too, even if nobody has touched them in weeks.
+2. **The slowest team sets the pace.** If any of the five teams has a red test suite, the other four don't ship either.
+3. **A rollback drags everyone with it.** Reverting a cart bug also reverts whatever the other four teams shipped in that same build.
+4. **A library version is a five-way negotiation.** Since everything is built together there can only be one version of React, and upgrading it is a collective project.
+
+<ConceptAnimation id="micro-frontends-deploy-coupling" />
+
+What hurts isn't the size of the code: it's that the moment of publishing is shared. That's why the problem never shows up with one team no matter how large the application is, and shows up with five no matter how small. Micro frontends solve an organisational problem that surfaces in the pipeline.
+
+## The cheapest way out: two applications and a link
+
+If the problem is that they publish together, the most direct fix is that they don't publish together, and the cheapest way to get there is splitting by URL: `nebula.com/store` is one complete application and `nebula.com/account` is another, each with its own repository, bundler and pipeline. In front of both, a reverse proxy —a server that receives every request and decides which of the two it goes to— routes by path. The contract between them is a link.
+
+This is not a consolation prize: it solves the whole problem. Each team ships whenever it wants and uses whatever version of React it wants, or a different framework entirely. The price is just as concrete: moving from one to the other means a full page reload, there's no shared in-memory state, and the browser downloads the common libraries twice.
+
+If your product tolerates that reload, you're done here. What it doesn't cover is one case: when two pieces from two different teams have to be **on the same screen at the same time**, like the cart summary floating over the product page.
+
+## When two pieces share a screen, the question is when they come together
+
+If the pieces are built separately but show up together, somebody has to join them at some point. That point is the axis of the spectrum, and there are only three places it can fall.
+
+1. **At build time.** Each team publishes its piece as a versioned package and a container application installs them and builds everything together. The tools are the usual ones: pnpm workspaces, or Bit to publish components one by one. The cost is that it hands part of the problem back — for a new version of the cart to reach users, the container has to be rebuilt. That team gets its repository back, but not its pipeline.
+2. **At the server.** Each piece is a service that responds with its own fragment of HTML, and something in front stitches them into a single document before sending it to the browser. This is where Nginx Server Side Includes live (a directive that replaces an HTML comment with the response from another URL), along with Tailor, Podium and Next.js Multi-Zones. The user receives the page already assembled, which is good for first paint and for search engines; what you pay is service-to-service traffic on every visit, and one slow piece delays the whole page.
+3. **In the browser.** The container downloads each piece's code while it's already running and mounts it inside the page. The range goes from the `iframe` —maximum isolation, minimum integration— to Web Components, single-spa or Module Federation. It's the only point where the cart team publishes new files and users see them without anyone else rebuilding anything. What you pay is that everything the bundler used to check now happens live: library versions, contracts between pieces, and errors that only show up in production.
+
+<ConceptAnimation id="micro-frontends-spectrum" />
+
+There is no correct point on that axis, there's a trade that keeps repeating: the later the pieces come together, the more independent each team is and the more work goes unchecked until the page is already in the user's hands.
+
+## The browser end, under the hood: Module Federation
+
+Let's take one of those four points and look inside it. Say we pick the browser one, with Module Federation: not because it's the best, but because it's the one that's hardest to understand secondhand. Any of the other three would give an equally concrete walk. The question to answer is this: how does one bundle —the set of files a bundler produces— import a module from another bundle that was built on a different machine, at a different time, and published at a different URL?
+
+Module Federation is the answer Webpack 5 and Rspack give, and Vite through a plugin. It defines two roles: the **host** is the container application and the **remote** is the piece that exposes itself for others to use. The cart team builds a remote; the home team builds the host.
+
+The walk has five steps, and the first two happen on different machines on different days:
+
+1. **The remote is built declaring what it exposes.** On top of its normal files, the bundler emits a `remoteEntry.js`: a manifest, meaning a small file that says which modules are available and which file each one lives in.
+2. **The host is built declaring which remotes it depends on** and the URL of each one's manifest. Its bundle contains not a single line of the cart's code: what it contains is an instruction to go fetch it.
+3. **In the browser, the host downloads `remoteEntry.js`** the first time it needs to render the cart. Until that moment it hasn't spent a byte on it.
+4. **The two negotiate shared libraries.** If the host already has React loaded and that version works for the remote, the remote reuses the instance instead of downloading its own.
+5. **The cart's code is downloaded and runs inside the same page**: same document, same DOM, same React runtime. From the user's side there's no seam.
+
+<ConceptAnimation id="module-federation-flow" />
+
+Here's step 1, in the remote's configuration, which is where you decide what goes out into the world:
+
+```ts title="rspack.config.ts (cart team)"
+new ModuleFederationPlugin({
+  name: "cart",
+  filename: "remoteEntry.js",
+  exposes: { "./Summary": "./src/summary.tsx" },
+  shared: { react: { singleton: true, requiredVersion: "^19.0.0" } },
+});
+```
+
+`exposes` is the list of exit doors: only those modules are reachable from outside, and their public name (`./Summary`) doesn't depend on where the file sits. `shared` lists the libraries there's no point duplicating, and `singleton: true` means "one single React instance on the page no matter what" — without it, two coexisting copies break hooks. The host declares the mirror image: a `remotes` entry with the manifest's URL, and from there a plain `import("cart/Summary")`.
+
+<Callout type="warning" title="Shipping without rebuilding is also breaking without rebuilding">
+  The cart team can drop a required property and publish. No build fails,
+  because there is no build where the two pieces meet. That contract is held up
+  by contract tests and manifest versioning, not by TypeScript.
+</Callout>
+
+## The whole spectrum at a glance
+
+| Joining point | Contract between pieces | Tools | What you pay |
+| :--- | :--- | :--- | :--- |
+| Never: separate pages | a URL | reverse proxy | full reload when switching pieces |
+| At build time | a package version | pnpm workspaces, Bit | rebuilding the container on every change |
+| At the server | an HTML fragment | Nginx SSI, Tailor, Podium, Next.js Multi-Zones | service-to-service latency on every visit |
+| In the browser | a module at a URL | iframes, Web Components, single-spa, Module Federation | versions and contracts negotiated in production |
+
+The column that matters is the last one. All four rows solve the problem we started with —five teams sharing a pipeline— so choosing isn't about finding the most powerful option, it's about looking at which of those four prices you can afford. A store whose sections barely talk to each other lives perfectly well in the first row; one that needs the cart visible on every screen ends up in the last.
+
+To find out whether you need any of this, don't look at the size of your repository: open last week's deployment history and count how many of those deploys carried changes from more than one team. If the answer is zero, your deployment unit is already split fine and you don't need anything from this post.
