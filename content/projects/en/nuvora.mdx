@@ -1,0 +1,69 @@
+---
+title: Nuvora
+description: "A landing page for a fictional marketing and productivity platform, built to practice animation and interaction with Motion."
+type: learning
+category: landing-page
+date: 2026-10-06
+order: 7
+featured: false
+draft: false
+preview:
+  publicId: portfolio/projects/nuvora/hero
+  alt: Purple Nuvora hero with a marketing headline, an email form, and a woman beside growth cards
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: React
+    logo: react
+  - name: TypeScript
+    logo: typescript
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: Motion
+  - name: Web Animations API
+links:
+  repository: https://github.com/DavidMarioLC/nuvora
+---
+
+## Snapshot
+
+- **Goal** — explore how to integrate Motion animations into a landing page while keeping content readable and respecting reduced motion preferences.
+- **Scope** — 4 hours building a responsive landing page with scroll entrances, counters, and interactive controls. Sign-in, forms, and plans are local demonstrations, with no backend or payments.
+- **What I verified** — the supplied Lighthouse screenshot records 100 for performance, 96 for accessibility, 100 for best practices, and 100 for SEO. This is a lab measurement; the screenshot does not identify the device or test conditions.
+
+## Why this project
+
+I wanted to practice Motion on a page with more variety than an isolated component. A fictional platform gave me room to work with cards, pricing, and testimonials without depending on a real product. Prices and business figures in the demo are sample content, not project outcomes.
+
+## Key decisions
+
+- **Motion for counters and the Web Animations API for entrances** — counters interpolate values over 1.6 seconds; scroll entrances take 800 ms. The tradeoff is maintaining two animation mechanisms, each with its own cancellation and cleanup logic.
+- **Restore content on focus or reduced motion** — entrances cancel when an element receives focus, and counters expose a stable value to screen readers. The tradeoff is that some visitors see the page without the full animation sequence.
+- **Keep interactions in the browser** — I could spend the 4 hours on the frontend without setting up external services. The tradeoff is that forms do not store email addresses, sign-in does not authenticate, and choosing a plan does not start a purchase.
+
+## What I learned
+
+- Animating a number also means deciding what gets announced: I separated the changing visual value from the stable text read by assistive technology.
+- My Motion practice focused on counters; entrances use the Web Animations API. Combining both mechanisms means maintaining their cancellation and cleanup separately. Everything went as expected.
+
+## What I'd do differently
+
+- Review the findings in the full accessibility report before another iteration: the score of 96 leaves room for improvement, but this screenshot does not identify the causes.
+
+## Evidence
+
+Results recorded in the supplied Lighthouse screenshot:
+
+| Category | Result |
+| :--- | ---: |
+| Performance | 100/100 |
+| Accessibility | 96/100 |
+| Best practices | 100/100 |
+| SEO | 100/100 |
+| Agentic Browsing | 2/2 |
+
+These values describe that lab run; the screenshot does not identify the device or test conditions.
+
+The [animated counter](https://github.com/DavidMarioLC/nuvora/blob/main/components/metric-counter.tsx) keeps accessible text separate from the visual value. The [accessibility commit](https://github.com/DavidMarioLC/nuvora/commit/ba1184895f3f66aa9387786b9830cd0b240aa7c3) documents changes to focus, contrast, and mobile pricing order.

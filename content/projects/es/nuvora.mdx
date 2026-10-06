@@ -1,0 +1,69 @@
+---
+title: Nuvora
+description: "Landing de una plataforma ficticia de marketing y productividad, creada para practicar animaciones e interacciones con Motion."
+type: learning
+category: landing-page
+date: 2026-10-06
+order: 7
+featured: false
+draft: false
+preview:
+  publicId: portfolio/projects/nuvora/hero
+  alt: Portada violeta de Nuvora con el titular de marketing, un formulario de correo y una mujer junto a tarjetas de crecimiento
+  width: 1920
+  height: 1080
+stack:
+  - name: Next.js
+    logo: nextjs
+  - name: React
+    logo: react
+  - name: TypeScript
+    logo: typescript
+  - name: Tailwind CSS
+    logo: tailwindcss
+  - name: Motion
+  - name: Web Animations API
+links:
+  repository: https://github.com/DavidMarioLC/nuvora
+---
+
+## Snapshot
+
+- **Objetivo** — comprobar cómo integrar animaciones con Motion en una landing, manteniendo el contenido legible y contemplando movimiento reducido.
+- **Alcance** — 4 horas de trabajo en una landing responsive con entradas al hacer scroll, contadores y controles interactivos. El acceso, los formularios y los planes son demostraciones locales, sin backend ni pagos.
+- **Qué comprobé** — la captura de Lighthouse registra 100 en rendimiento, 96 en accesibilidad, 100 en buenas prácticas y 100 en SEO. Es una medición de laboratorio; la captura no identifica dispositivo ni condiciones de ejecución.
+
+## Por qué este proyecto
+
+Quería practicar animaciones con Motion sobre una página que tuviera más variedad que un componente aislado. Una plataforma ficticia me permitió trabajar con tarjetas, planes y testimonios sin depender de un producto real. Los precios y cifras comerciales de la demo son contenido de ejemplo, no resultados del proyecto.
+
+## Decisiones clave
+
+- **Motion para los contadores y Web Animations API para las entradas** — los contadores interpolan valores durante 1,6 segundos; las entradas al hacer scroll duran 800 ms. A cambio, mantengo dos mecanismos de animación, con sus propias tareas de cancelación y limpieza.
+- **Restaurar el contenido ante foco o movimiento reducido** — las entradas se cancelan al recibir foco y los contadores ofrecen un valor estable a los lectores de pantalla. A cambio, algunas personas reciben una presentación sin la secuencia animada completa.
+- **Interacciones resueltas en el navegador** — pude dedicar las 4 horas al frontend sin configurar servicios externos. A cambio, los formularios no guardan correos, el acceso no autentica y elegir un plan no inicia una compra.
+
+## Qué aprendí
+
+- Animar un número también exige decidir qué se anuncia: separé el valor visual cambiante del texto estable que leen las tecnologías de asistencia.
+- La práctica de Motion quedó concentrada en los contadores; las entradas usan Web Animations API. El proyecto combina ambos mecanismos y requiere mantener su cancelación y limpieza por separado. Todo salió según esperaba.
+
+## Qué haría distinto
+
+- Revisaría los hallazgos del informe completo de accesibilidad antes de otra iteración: el 96 muestra margen de mejora, pero esta captura no permite identificar las causas.
+
+## Evidencia
+
+Resultados registrados en la captura de Lighthouse:
+
+| Categoría | Resultado |
+| :--- | ---: |
+| Rendimiento | 100/100 |
+| Accesibilidad | 96/100 |
+| Buenas prácticas | 100/100 |
+| SEO | 100/100 |
+| Agentic Browsing | 2/2 |
+
+Los valores corresponden a esa ejecución de laboratorio; la captura no identifica dispositivo ni condiciones de prueba.
+
+El [contador animado](https://github.com/DavidMarioLC/nuvora/blob/main/components/metric-counter.tsx) conserva el texto accesible separado del valor visual. El [commit de accesibilidad](https://github.com/DavidMarioLC/nuvora/commit/ba1184895f3f66aa9387786b9830cd0b240aa7c3) documenta ajustes de foco, contraste y orden de los planes en móvil.
